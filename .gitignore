@@ -1,10 +1,12 @@
-# Node
+# Node & Next.js
 node_modules/
 dist/
 build/
 .next/
 .turbo/
 coverage/
+
+# TypeScript
 *.tsbuildinfo
 
 # Python
@@ -15,12 +17,15 @@ __pycache__/
 .pytest_cache/
 .cache/
 
-# OS
+# IDE & OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
 
 # Logs
 *.log
+reload_debug.txt
 
 # Secrets
 .env

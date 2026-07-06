@@ -1,0 +1,295 @@
+{
+	"info": {
+		"_postman_id": "8f830dae-28a1-4357-9dbd-f3cf1600dbcf",
+		"name": "Vehicle Tracking System (VTS) Backend",
+		"description": "Collection for checking API endpoints of the VTS Backend (FastAPI + PostgreSQL)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Root Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Vehicles",
+			"item": [
+				{
+					"name": "Create Vehicle",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"device_uid\": \"VTS-DEVICE-9080\",\n    \"vehicle_name\": \"Delivery Van 5\",\n    \"vehicle_type\": \"Van\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vehicles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vehicles"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Vehicles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vehicles?skip=0&limit=100",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vehicles"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Vehicle by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vehicles/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vehicles",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Vehicle",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicle_name\": \"Delivery Van 5 - Updated\",\n    \"vehicle_type\": \"Cargo Van\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vehicles/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vehicles",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Vehicle",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vehicles/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vehicles",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Telemetry & Locations",
+			"item": [
+				{
+					"name": "Post Standard Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicle_id\": 1,\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"speed\": 45.2,\n    \"altitude\": 10.0,\n    \"timestamp\": \"2026-06-23T11:30:00Z\",\n    \"extra_data\": {\n        \"ignition\": 1,\n        \"engine_temp_c\": 85.0\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/locations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"locations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post VTS Device Telemetry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uid\": \"VTS-DEVICE-9080\",\n    \"info\": {\n        \"dt\": 1782214732,\n        \"txn\": \"E\",\n        \"msgkey\": 0,\n        \"msgid\": 11720,\n        \"cmdkey\": \"\",\n        \"cmdval\": \"\"\n    },\n    \"gps\": {\n        \"fix\": \"A\",\n        \"loc\": [22.061200, 74.133017],\n        \"speed\": 32.5,\n        \"sat\": 10,\n        \"alt\": 14.0,\n        \"dir\": 137.0,\n        \"odo\": 1332893.0\n    },\n    \"io\": {\n        \"box\": 0,\n        \"ign\": 1,\n        \"gpi\": 1,\n        \"status\": 0,\n        \"analog\": [1935, 1234]\n    },\n    \"pwr\": {\n        \"main\": 1,\n        \"batt\": 1,\n        \"volt\": 3826.0,\n        \"mvolt\": 12.36\n    },\n    \"dbg\": {\n        \"status\": [5, 5, 22, 8, 3, 1],\n        \"ver\": [\"1.9JCPLUS\", \"1.0\"],\n        \"lib\": \"6.65\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vts/telemetry",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vts",
+								"telemetry"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Location",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/locations/latest/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"locations",
+								"latest",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Location History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/locations/history/1?start_time=2026-06-23T00:00:00Z&end_time=2026-06-24T00:00:00Z&skip=0&limit=100",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"locations",
+								"history",
+								"1"
+							],
+							"query": [
+								{
+									"key": "start_time",
+									"value": "2026-06-23T00:00:00Z"
+								},
+								{
+									"key": "end_time",
+									"value": "2026-06-24T00:00:00Z"
+								},
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "100"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		}
+	]
+}

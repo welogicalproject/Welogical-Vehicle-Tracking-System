@@ -1,0 +1,57 @@
+import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# App settings configuration
+class Settings(BaseSettings):
+    # App settings
+    APP_NAME: str = "Vehicle Tracking System Backend"
+    APP_ENV: str = "development"
+    DEBUG: bool = True
+    HOST: str = "0.0.0.0"
+    PORT: int = 8000
+
+    # Database settings
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vts_db"
+    ASYNC_DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vts_db"
+
+    # Logging settings
+    LOG_LEVEL: str = "INFO"
+
+    # Trip configuration thresholds
+    TRIP_START_SPEED_THRESHOLD: float = 5.0
+    TRIP_END_SPEED_THRESHOLD: float = 1.5
+    TRIP_END_TIMEOUT: int = 300
+    TRIP_GAP_TIMEOUT: int = 600
+    DEFAULT_SPEED_LIMIT: float = 80.0
+
+    # Trip analytics thresholds
+    TRIP_STOP_SPEED: float = 3.0
+    TRIP_STOP_DURATION: int = 120
+    OVERSPEED_LIMIT: float = 80.0
+
+    # Driving score penalties
+    DRIVING_SCORE_START: int = 100
+    DRIVING_SCORE_OVERSPEED_PENALTY: int = 5
+    DRIVING_SCORE_IDLE_PENALTY: int = 2
+    DRIVING_SCORE_MIN: int = 0
+
+    # Google Routes integration settings (Phase 1: configuration only)
+    GOOGLE_ROUTES_ENABLED: bool = False
+    GOOGLE_ROUTES_API_KEY: str = ""
+    GOOGLE_ROUTES_MONTHLY_LIMIT: int = 9500
+    GOOGLE_ROUTES_WARNING_THRESHOLD: int = 8000
+    GOOGLE_ROUTES_TIMEOUT_SECONDS: int = 5
+    GOOGLE_ROUTES_PROVIDER: str = "google"
+    SAVE_RAW_GOOGLE_RESPONSES: bool = False
+
+
+    # Pydantic Settings configuration
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+
+settings = Settings()

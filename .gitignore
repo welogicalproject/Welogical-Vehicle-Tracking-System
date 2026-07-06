@@ -1,0 +1,32 @@
+# Node
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets
+.env
+.env.*
+!*.example
+*.pem
+*.key
+*secret*.json
+*credentials*.json

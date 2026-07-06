@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hot-reload trigger comment to compile Tailwind */
+
+@layer base {
+  body {
+    @apply bg-background text-white antialiased;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Custom premium scrollbar for slate themes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0f19;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e294b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}
+
+/* Glassmorphism utility card border highlights */
+.glass-panel {
+  background: rgba(19, 26, 45, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 75, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Pulsing online badge micro-animation */
+@keyframes onlinePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse-online {
+  animation: onlinePulse 2s infinite ease-in-out;
+}

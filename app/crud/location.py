@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from app.utils.datetime import normalize_datetime
 from typing import Any, Dict, List, Optional
 import logging
 from sqlalchemy import select, and_, asc
@@ -49,6 +50,8 @@ async def get_location_history(
     
     query = select(Location).where(Location.vehicle_id == vehicle_id)
     
+    start_time = normalize_datetime(start_time)
+    end_time = normalize_datetime(end_time)
     if start_time:
         query = query.where(Location.timestamp >= start_time)
     if end_time:
@@ -57,6 +60,7 @@ async def get_location_history(
     query = query.order_by(Location.timestamp.asc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
+
 
 
 async def create_location(db: AsyncSession, location_in: LocationCreate) -> Location:

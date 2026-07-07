@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from app.utils.datetime import normalize_datetime
 from typing import List, Optional
 from sqlalchemy import select, desc, asc, func
 from sqlalchemy.orm import selectinload
@@ -26,10 +27,14 @@ async def get_events(
         query = query.where(Event.event_type == event_type)
     if severity is not None:
         query = query.where(Event.severity == severity)
+        
+    start_time = normalize_datetime(start_time)
+    end_time = normalize_datetime(end_time)
     if start_time is not None:
         query = query.where(Event.created_at >= start_time)
     if end_time is not None:
         query = query.where(Event.created_at <= end_time)
+
         
     if sort.lower() == "asc":
         query = query.order_by(asc(Event.created_at))

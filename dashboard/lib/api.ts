@@ -1,6 +1,29 @@
 import { Vehicle, Location, RawPacket, SystemStats, Event, EventStats, DeviceConfig, DeviceCommand, CommandLog, VehicleTrackingSnapshot, Trip, TripSummary, ReplayResponse, Driver, DriverAssignment, TripGoogleRoute } from "../types";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+function getBaseUrl(): string {
+  // Priority 1: environment variable (populated during build or runtime)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // Priority 2: If running in production (browser hostname is NOT localhost/127.0.0.1 OR NODE_ENV is production)
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+      return "https://welogical-vehicle-tracking-system.onrender.com";
+    }
+  } else {
+    // Server-side environment check
+    if (process.env.NODE_ENV === "production") {
+      return "https://welogical-vehicle-tracking-system.onrender.com";
+    }
+  }
+
+  // Priority 3: Fall back to local development URL
+  return "http://127.0.0.1:8000";
+}
+
+const BASE_URL = getBaseUrl().replace(/\/$/, "");
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;

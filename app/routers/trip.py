@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from app.utils.datetime import normalize_datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status, Query, HTTPException
 from fastapi.responses import Response
@@ -39,6 +40,8 @@ async def get_vehicle_trips(
 
     query = select(Trip).where(Trip.vehicle_id == vehicle_id)
 
+    start_time = normalize_datetime(start_time)
+    end_time = normalize_datetime(end_time)
     if start_time:
         query = query.where(Trip.start_time >= start_time)
     if end_time:
@@ -49,6 +52,7 @@ async def get_vehicle_trips(
     query = query.order_by(Trip.start_time.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     return list(result.scalars().all())
+
 
 @router.post("/vehicles/{vehicle_id}/trips/rebuild", status_code=status.HTTP_200_OK)
 async def rebuild_trips(

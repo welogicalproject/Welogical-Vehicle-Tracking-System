@@ -1,0 +1,1796 @@
+{
+  "info": {
+    "_postman_id": "8a3d5e9c-4f81-4bda-bc6c-7f5b82c16301",
+    "name": "Vehicle Tracking System API",
+    "description": "Production-quality API testing collection for Welogical Vehicle Tracking System backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET Root Welcome",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response time < 1000ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "pm.test(\"Content-Type is JSON\", function () {",
+                  "    pm.response.to.have.header(\"Content-Type\");",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"online\");",
+                  "    pm.expect(jsonData).to.have.property(\"docs_url\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Endpoint returning API service info and active status."
+          }
+        },
+        {
+          "name": "GET Health Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response time < 1000ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "pm.test(\"Content-Type is JSON\", function () {",
+                  "    pm.response.to.have.header(\"Content-Type\");",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"healthy\");",
+                  "    pm.expect(jsonData.database).to.eql(\"connected\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/health",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Liveness and database connection status healthcheck."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "Create Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Response time < 1000ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "pm.test(\"Content-Type is JSON\", function () {",
+                  "    pm.response.to.have.header(\"Content-Type\");",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.device_uid).to.eql(\"ESP32-DEMO-001\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"VEHICLE_ID\", jsonData.id);",
+                  "pm.environment.set(\"DEVICE_UID\", jsonData.device_uid);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_uid\": \"ESP32-DEMO-001\",\n  \"vehicle_name\": \"Toyota Corolla\",\n  \"vehicle_type\": \"Sedan\",\n  \"vehicle_number\": \"GJ05AB1234\",\n  \"manufacturer\": \"Toyota\",\n  \"model\": \"Corolla\",\n  \"year\": 2024,\n  \"vin\": \"1NXBR32E64Z123456\",\n  \"imei\": \"864009040001234\",\n  \"sim_number\": \"+919876543210\",\n  \"fuel_type\": \"Petrol\",\n  \"capacity\": 50.0,\n  \"status\": \"Enabled\",\n  \"notes\": \"ESP32 primary tracking unit test vehicle\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "description": "Registers a new tracking vehicle in the fleet management system."
+          }
+        },
+        {
+          "name": "Create Duplicate Vehicle (Conflict 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Response time < 1000ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "    pm.expect(jsonData.detail).to.include(\"already exists\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_uid\": \"ESP32-DEMO-001\",\n  \"vehicle_name\": \"Toyota Corolla Duplicate\",\n  \"vehicle_type\": \"Sedan\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles"
+              ]
+            },
+            "description": "Validates that submitting a duplicate device_uid returns HTTP 409 Conflict."
+          }
+        },
+        {
+          "name": "List Vehicles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles?skip=0&limit=100",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles"
+              ],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Lists all non-archived fleet tracking vehicles."
+          }
+        },
+        {
+          "name": "Get Vehicle by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.eql(parseInt(pm.environment.get(\"VEHICLE_ID\")));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Retrieves the full profile metadata of a vehicle."
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.vehicle_name).to.eql(\"Toyota Corolla Updated\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_name\": \"Toyota Corolla Updated\",\n  \"capacity\": 55.0\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Updates profile configurations for a vehicle."
+          }
+        },
+        {
+          "name": "Delete/Archive Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"Archived\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Soft-deletes a vehicle by transitioning its status to Archived."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drivers",
+      "item": [
+        {
+          "name": "Create Driver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.driver_name).to.eql(\"John Doe\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"DRIVER_ID\", jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driver_name\": \"John Doe\",\n  \"phone_number\": \"9876543210\",\n  \"email\": \"john.doe@example.com\",\n  \"license_number\": \"DL-54321098765\",\n  \"license_expiry\": \"2030-12-31T00:00:00Z\",\n  \"emergency_contact\": \"Jane Doe: 9876543211\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/drivers",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "drivers"
+              ]
+            },
+            "description": "Registers a new driver profile."
+          }
+        },
+        {
+          "name": "List Drivers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/drivers?skip=0&limit=100",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "drivers"
+              ],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Lists all driver profiles."
+          }
+        },
+        {
+          "name": "Get Driver by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.eql(parseInt(pm.environment.get(\"DRIVER_ID\")));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/drivers/{{DRIVER_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "drivers",
+                "{{DRIVER_ID}}"
+              ]
+            },
+            "description": "Retrieves the full profile details of a driver."
+          }
+        },
+        {
+          "name": "Update Driver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.email).to.eql(\"john.updated@example.com\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.updated@example.com\",\n  \"emergency_contact\": \"Jane Doe: 9876543212\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/drivers/{{DRIVER_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "drivers",
+                "{{DRIVER_ID}}"
+              ]
+            },
+            "description": "Updates contact details of a driver."
+          }
+        },
+        {
+          "name": "Delete Driver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/drivers/{{DRIVER_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "drivers",
+                "{{DRIVER_ID}}"
+              ]
+            },
+            "description": "Permanently deletes a driver from registry."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Assignments",
+      "item": [
+        {
+          "name": "Assign Driver to Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.status).to.eql(\"Active\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"ASSIGNMENT_ID\", jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/assign/{{DRIVER_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "assign",
+                "{{DRIVER_ID}}"
+              ]
+            },
+            "description": "Establishes a tracking linkage mapping an active driver to a vehicle."
+          }
+        },
+        {
+          "name": "Get Active Assignment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"Active\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/assignments/active",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "assignments",
+                "active"
+              ]
+            },
+            "description": "Gets current active assignment mapping for a vehicle."
+          }
+        },
+        {
+          "name": "Release Driver from Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"Completed\");",
+                  "    pm.expect(jsonData.released_at).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/release",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "release"
+              ]
+            },
+            "description": "Closes the current active assignment for a vehicle."
+          }
+        },
+        {
+          "name": "Get Vehicle Assignment History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/assignments/history",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "assignments",
+                "history"
+              ]
+            },
+            "description": "Retrieves the complete historical assignments log for a vehicle."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Log Standard Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"LOCATION_ID\", jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": 1,\n  \"latitude\": 21.17024,\n  \"longitude\": 72.83106,\n  \"speed\": 45.5,\n  \"altitude\": 12.0,\n  \"timestamp\": \"2026-07-07T10:00:00Z\",\n  \"extra_data\": {\n    \"txn\": \"A\",\n    \"io\": {\n      \"ign\": 1\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/locations",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "locations"
+              ]
+            },
+            "description": "Logs a coordinates log payload, updating the vehicle's last_seen field."
+          }
+        },
+        {
+          "name": "Get Latest Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"latitude\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/locations/latest/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "locations",
+                "latest",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Queries the most recent coordinates record for a vehicle."
+          }
+        },
+        {
+          "name": "Get Location History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/locations/history/{{VEHICLE_ID}}?limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "locations",
+                "history",
+                "{{VEHICLE_ID}}"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Gets historical tracking coordinates range for a vehicle."
+          }
+        },
+        {
+          "name": "List All Locations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/locations?limit=100",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Lists all locations across all vehicles (Database explorer)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Telemetry Ingestion",
+      "item": [
+        {
+          "name": "Ingest Telemetry Packet (VTS Protocol)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.result).to.eql(true);",
+                  "    pm.expect(jsonData.msg).to.eql(\"Data Success\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uid\": \"ESP32-DEMO-001\",\n  \"info\": {\n    \"dt\": 1783425600,\n    \"txn\": \"A\",\n    \"msgkey\": 0,\n    \"msgid\": 45\n  },\n  \"gps\": {\n    \"fix\": \"A\",\n    \"loc\": [\n      21.17024,\n      72.83106\n    ],\n    \"speed\": 50.2,\n    \"sat\": 9,\n    \"alt\": 15.0,\n    \"dir\": 90.0,\n    \"odo\": 15200.0\n  },\n  \"io\": {\n    \"box\": 0,\n    \"ign\": 1,\n    \"gpi\": 0,\n    \"status\": 0,\n    \"analog\": [\n      12000\n    ]\n  },\n  \"pwr\": {\n    \"main\": 1,\n    \"batt\": 1,\n    \"volt\": 4200.0,\n    \"mvolt\": 12.5\n  },\n  \"dbg\": {\n    \"status\": [\n      0\n    ],\n    \"ver\": [\n      \"1.0\",\n      \"1.0\"\n    ],\n    \"lib\": \"VTS-v1.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/vts/telemetry",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vts",
+                "telemetry"
+              ]
+            },
+            "description": "Ingests a telemetry packet conforming to the VTS Protocol Description."
+          }
+        },
+        {
+          "name": "List Raw Packets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vts/raw-packets?limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vts",
+                "raw-packets"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Lists raw payloads captured in the debug monitor raw_packets registry."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Commands",
+      "item": [
+        {
+          "name": "Queue New Command",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.status).to.eql(\"PENDING\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"COMMAND_ID\", jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": 1,\n  \"command_name\": \"PRD\",\n  \"command_value\": \"10\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/commands",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands"
+              ]
+            },
+            "description": "Queues a new command for a device. Initial status is PENDING."
+          }
+        },
+        {
+          "name": "List Commands Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands?limit=50",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Lists historical queued commands."
+          }
+        },
+        {
+          "name": "Mark Command as Sent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SENT\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands/{{COMMAND_ID}}/send",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands",
+                "{{COMMAND_ID}}",
+                "send"
+              ]
+            },
+            "description": "Transitions a command status from PENDING to SENT."
+          }
+        },
+        {
+          "name": "Mark Command as Executed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"EXECUTED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands/{{COMMAND_ID}}/execute",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands",
+                "{{COMMAND_ID}}",
+                "execute"
+              ]
+            },
+            "description": "Transitions command state to EXECUTED, triggering system events."
+          }
+        },
+        {
+          "name": "Mark Command as Failed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"FAILED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands/{{COMMAND_ID}}/fail?message=No response timeout",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands",
+                "{{COMMAND_ID}}",
+                "fail"
+              ],
+              "query": [
+                {
+                  "key": "message",
+                  "value": "No response timeout"
+                }
+              ]
+            },
+            "description": "Transitions command state to FAILED."
+          }
+        },
+        {
+          "name": "Get Command Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands/{{COMMAND_ID}}/logs",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands",
+                "{{COMMAND_ID}}",
+                "logs"
+              ]
+            },
+            "description": "Retrieves the historical audit log of transitions for a command."
+          }
+        },
+        {
+          "name": "Delete Command",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/commands/{{COMMAND_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "commands",
+                "{{COMMAND_ID}}"
+              ]
+            },
+            "description": "Removes a command from the transmission queue."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Configurations",
+      "item": [
+        {
+          "name": "Create Configuration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"id\");",
+                  "    pm.expect(jsonData.server_ip).to.eql(\"121.242.100.50\");",
+                  "});",
+                  "// Variable chaining",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"CONFIG_ID\", jsonData.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": 1,\n  \"server_ip\": \"121.242.100.50\",\n  \"server_port\": 5000,\n  \"apn\": \"iot.airtel.com\",\n  \"timezone\": \"+05:30\",\n  \"reporting_interval\": 30,\n  \"speed_limit\": 80.0,\n  \"feature_flags\": {\n    \"geofence\": true,\n    \"ignition_alert\": true\n  },\n  \"firmware_version\": \"v1.2.3\",\n  \"hardware_version\": \"v3.0\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/configurations",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "configurations"
+              ]
+            },
+            "description": "Registers device/ingestion settings profile for a vehicle."
+          }
+        },
+        {
+          "name": "Get Configuration by Vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.vehicle_id).to.eql(parseInt(pm.environment.get(\"VEHICLE_ID\") || 1));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/configurations/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "configurations",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Retrieves the device configuration settings profile."
+          }
+        },
+        {
+          "name": "Update Configuration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.speed_limit).to.eql(90.0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speed_limit\": 90.0,\n  \"reporting_interval\": 15\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/configurations/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "configurations",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Updates hardware parameters for the device profile."
+          }
+        },
+        {
+          "name": "Delete Configuration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/configurations/{{VEHICLE_ID}}",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "configurations",
+                "{{VEHICLE_ID}}"
+              ]
+            },
+            "description": "Deletes configurations profile registry."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Events Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"critical\");",
+                  "    pm.expect(jsonData).to.have.property(\"total\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/events/stats",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "events",
+                "stats"
+              ]
+            },
+            "description": "Retrieves total event counts sliced by critical/warning/info severity levels."
+          }
+        },
+        {
+          "name": "List Recent Events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/events/recent?limit=10",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "events",
+                "recent"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lists the most recent warnings and system alert events."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "List Vehicle Trips",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"array\");",
+                  "    if (jsonData.length > 0) {",
+                  "        pm.environment.set(\"TRIP_ID\", jsonData[0].id);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips?limit=10",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lists historical trip logs generated for a vehicle."
+          }
+        },
+        {
+          "name": "Rebuild Trips from History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.result).to.eql(true);",
+                  "    pm.expect(jsonData.trips_created).to.be.a(\"number\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips/rebuild",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips",
+                "rebuild"
+              ]
+            },
+            "description": "Idempotently recalculates and regenerates all trips for a vehicle."
+          }
+        },
+        {
+          "name": "Get Trip Summary Analytics",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property(\"driver_score\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips/{{TRIP_ID}}/summary",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips",
+                "{{TRIP_ID}}",
+                "summary"
+              ]
+            },
+            "description": "Retrieves analytics summary metrics including stop events and driver scores."
+          }
+        },
+        {
+          "name": "Get Trip Replay playback",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.points).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips/{{TRIP_ID}}/replay?multiplier=1",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips",
+                "{{TRIP_ID}}",
+                "replay"
+              ],
+              "query": [
+                {
+                  "key": "multiplier",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Retrieves playback coordinates list with downsampling logic."
+          }
+        },
+        {
+          "name": "Get Trip GeoJSON format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.type).to.eql(\"Feature\");",
+                  "    pm.expect(jsonData.geometry.type).to.eql(\"LineString\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips/{{TRIP_ID}}/geojson",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips",
+                "{{TRIP_ID}}",
+                "geojson"
+              ]
+            },
+            "description": "Generates standard GeoJSON geometry for dashboard maps integrations."
+          }
+        },
+        {
+          "name": "Export Trip CSV file",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/vehicles/{{VEHICLE_ID}}/trips/{{TRIP_ID}}/export",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "vehicles",
+                "{{VEHICLE_ID}}",
+                "trips",
+                "{{TRIP_ID}}",
+                "export"
+              ]
+            },
+            "description": "Exports coordinate logs and speed metrics for a trip as a downloadable CSV."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Route Cache",
+      "item": [
+        {
+          "name": "Snap Path (Map Matching API)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Validate response body schema\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.coordinates).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waypoints\": [\n    [\n      21.17024,\n      72.83106\n    ],\n    [\n      21.18524,\n      72.84506\n    ]\n  ],\n  \"travel_mode\": \"DRIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/routes/snap-path",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "routes",
+                "snap-path"
+              ]
+            },
+            "description": "Snaps custom coordinates to road network using the Google Routes snap cache."
+          }
+        }
+      ]
+    }
+  ]
+}

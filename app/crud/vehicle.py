@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from app.utils.datetime import normalize_datetime
 from typing import Dict, List, Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -71,10 +72,8 @@ async def get_tracking_snapshots(
     end_time: Optional[datetime] = None,
     limit_per_vehicle: int = 500
 ) -> List[VehicleTrackingSnapshot]:
-    if start_time and start_time.tzinfo is not None:
-        start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
-    if end_time and end_time.tzinfo is not None:
-        end_time = end_time.astimezone(timezone.utc).replace(tzinfo=None)
+    start_time = normalize_datetime(start_time)
+    end_time = normalize_datetime(end_time)
 
     vehicle_query = (
         select(Vehicle)

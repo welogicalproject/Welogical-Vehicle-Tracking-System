@@ -3,8 +3,9 @@ import sys
 import subprocess
 
 # Change working directory to project root
-project_root = r"E:\Embedded Projects\GPS_Project"
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(project_root)
+
 print(f"[run_alembic.py] Changed directory to: {os.getcwd()}")
 
 # Run alembic command using virtualenv python

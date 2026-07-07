@@ -1,0 +1,29 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: vts-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    
+    # [OPTIONAL] Pre-deployment Database Migrations Command:
+    # Uncomment the command below if you want Render to automatically run Alembic migrations 
+    # before booting the updated application. If commented out, you must apply migrations 
+    # manually or out-of-band to prevent database-lock and control migrations.
+    # preDeployCommand: alembic upgrade head
+    
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: CORS_ORIGINS
+        value: "https://your-frontend-app.vercel.app"  # Replace with actual Vercel domain post-deployment
+      - key: DATABASE_URL
+        sync: false  # Must be provided in the Render dashboard (e.g. Supabase URL)
+      - key: ASYNC_DATABASE_URL
+        sync: false  # Optional. If omitted, the backend will dynamically auto-derive it from DATABASE_URL
+      - key: GOOGLE_ROUTES_ENABLED
+        value: "false"
+      - key: GOOGLE_ROUTES_API_KEY
+        sync: false  # Optional Google Routes API key

@@ -32,9 +32,10 @@ app = FastAPI(
 )
 
 # Configure CORS Middleware
+origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,8 +74,12 @@ async def run_migrations():
         from alembic.config import Config
         from alembic import command
         import sys
-        sys.path.insert(0, "e:\\Embedded Projects\\GPS_Project")
-        alembic_cfg = Config("e:\\Embedded Projects\\GPS_Project\\alembic.ini")
+        import os
+        # Dynamically determine the base project directory where alembic.ini resides
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if base_dir not in sys.path:
+            sys.path.insert(0, base_dir)
+        alembic_cfg = Config(os.path.join(base_dir, "alembic.ini"))
         command.upgrade(alembic_cfg, "head")
         return {"status": "success", "message": "Alembic upgrade head completed successfully."}
     except Exception as e:

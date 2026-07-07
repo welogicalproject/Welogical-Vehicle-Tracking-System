@@ -17,6 +17,7 @@ from app.services.trip_replay import get_trip_replay_points
 from app.services.trip_export import serialize_trip_to_geojson, get_trip_csv_content
 from app.services.route_cache import get_or_compute_trip_route
 from app.crud.vehicle import get_vehicle
+from app.exceptions import EntityNotFoundError
 
 router = APIRouter(tags=["Trips"])
 

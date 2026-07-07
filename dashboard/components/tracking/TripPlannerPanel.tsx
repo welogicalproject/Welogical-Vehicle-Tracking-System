@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { VehicleTrackingSnapshot } from "../../types";
 import { Button } from "../ui/button";
 import { Loader2, Navigation, MapPin } from "lucide-react";
+import { api } from "../../lib/api";
+
 
 interface PlannedRouteSummary {
   distance_meters: number;
@@ -79,26 +81,15 @@ export function TripPlannerPanel({
     setSummary(null);
 
     try {
-      const response = await fetch("http://localhost:8000/routes/snap-path", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          waypoints: [
-            [currentLoc.latitude, currentLoc.longitude],
-            [destinationCoords.current.lat, destinationCoords.current.lng],
-          ],
-          travel_mode: "DRIVE"
-        }),
-      });
+      const data = await api.snapPath([
+        [currentLoc.latitude, currentLoc.longitude],
+        [destinationCoords.current.lat, destinationCoords.current.lng],
+      ], "DRIVE");
 
-      if (!response.ok) {
-        throw new Error("Failed to plan route.");
-      }
-
-      const data = await response.json();
       setSummary(data);
       onRoutePlanned(data);
     } catch (err: any) {
+
       setError(err.message || "An error occurred while planning the route.");
       onRoutePlanned(null);
     } finally {

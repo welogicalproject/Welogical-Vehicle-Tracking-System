@@ -1,4 +1,5 @@
 import os
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,10 +11,11 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # Database settings
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vts_db"
-    ASYNC_DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/vts_db"
+    ASYNC_DATABASE_URL: str = ""
 
     # Logging settings
     LOG_LEVEL: str = "INFO"
@@ -53,5 +55,29 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @model_validator(mode="after")
+    def validate_database_urls(self) -> "Settings":
+        # 1. Standardize DATABASE_URL schema: replace postgres:// with postgresql:// if needed
+        # SQLAlchemy 1.4/2.0 requires postgresql:// instead of postgres://
+        if self.DATABASE_URL.startswith("postgres://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        
+        # 2. Derive ASYNC_DATABASE_URL if empty or not set
+        if not self.ASYNC_DATABASE_URL:
+            if self.DATABASE_URL.startswith("postgresql://"):
+                self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif self.DATABASE_URL.startswith("postgres://"):
+                self.ASYNC_DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+            else:
+                self.ASYNC_DATABASE_URL = self.DATABASE_URL
+        else:
+            # Standardize ASYNC_DATABASE_URL schema
+            if self.ASYNC_DATABASE_URL.startswith("postgres://"):
+                self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif self.ASYNC_DATABASE_URL.startswith("postgresql://"):
+                self.ASYNC_DATABASE_URL = self.ASYNC_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self
+
 
 settings = Settings()
+

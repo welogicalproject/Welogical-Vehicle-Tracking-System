@@ -1,8 +1,16 @@
 import psycopg2
+import sys
+import os
 from datetime import datetime
 
+# Add project root to python path to import settings
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
+from app.config import settings
+
 try:
-    conn = psycopg2.connect("postgresql://postgres:postgres123@127.0.0.1:5432/vts_db")
+    conn = psycopg2.connect(settings.DATABASE_URL)
+
     cur = conn.cursor()
 
     cur.execute("SELECT NOW(), NOW() at time zone 'UTC'")

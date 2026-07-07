@@ -4,9 +4,12 @@ import psycopg2
 from alembic.config import Config
 from alembic import command
 
-PROJECT_ROOT = r"E:\Embedded Projects\GPS_Project"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 os.chdir(PROJECT_ROOT)
 print(f"[db_validate.py] Changed directory to: {os.getcwd()}")
+
+from app.config import settings
 
 # 1. Run Alembic upgrade head programmatically
 try:
@@ -21,7 +24,8 @@ except Exception as e:
 # 2. Connect to database and verify table existence
 try:
     print("[db_validate.py] Connecting to PostgreSQL to check tables...")
-    conn = psycopg2.connect("postgresql://postgres:postgres123@127.0.0.1:5432/vts_db")
+    conn = psycopg2.connect(settings.DATABASE_URL)
+
     cur = conn.cursor()
     
     # Query tables in public schema

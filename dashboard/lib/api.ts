@@ -261,4 +261,12 @@ export const api = {
 
   getDriverAssignmentHistory: (driverId: number): Promise<DriverAssignment[]> =>
     request<DriverAssignment[]>(`/drivers/${driverId}/assignments/history`),
+
+  // Routes Ingestion / Snapping
+  snapPath: (waypoints: [number, number][], travelMode = "DRIVE"): Promise<any> =>
+    request<any>("/routes/snap-path", {
+      method: "POST",
+      body: JSON.stringify({ waypoints, travel_mode: travelMode }),
+    }),
 };
+

@@ -62,8 +62,7 @@ async def create_command(db: AsyncSession, command_in: DeviceCommandCreate) -> D
     db.add(db_log)
     
     await db.commit()
-    await db.refresh(db_command)
-    return db_command
+    return await get_command(db, db_command.id)
 
 
 async def update_status(db: AsyncSession, command_id: int, status_update: DeviceCommandUpdate) -> DeviceCommand:
@@ -106,8 +105,8 @@ async def update_status(db: AsyncSession, command_id: int, status_update: Device
         )
 
     await db.commit()
-    await db.refresh(db_command)
-    return db_command
+    return await get_command(db, db_command.id)
+
 
 
 async def delete_command(db: AsyncSession, command_id: int) -> DeviceCommand:

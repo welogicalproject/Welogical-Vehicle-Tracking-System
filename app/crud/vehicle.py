@@ -198,8 +198,7 @@ async def create_vehicle(db: AsyncSession, vehicle_in: VehicleCreate) -> Vehicle
     db.add(db_vehicle)
     await db.flush() # flush to get auto-generated ID
     await db.commit()
-    await db.refresh(db_vehicle)
-    return db_vehicle
+    return await get_vehicle(db, db_vehicle.id)
 
 
 async def update_vehicle(db: AsyncSession, vehicle_id: int, vehicle_in: VehicleUpdate) -> Vehicle:
@@ -216,8 +215,7 @@ async def update_vehicle(db: AsyncSession, vehicle_id: int, vehicle_in: VehicleU
         setattr(db_vehicle, field, value)
         
     await db.commit()
-    await db.refresh(db_vehicle)
-    return db_vehicle
+    return await get_vehicle(db, db_vehicle.id)
 
 
 async def delete_vehicle(db: AsyncSession, vehicle_id: int) -> Vehicle:
@@ -225,5 +223,5 @@ async def delete_vehicle(db: AsyncSession, vehicle_id: int) -> Vehicle:
     # Perform soft delete by archiving vehicle
     db_vehicle.status = "Archived"
     await db.commit()
-    await db.refresh(db_vehicle)
-    return db_vehicle
+    return await get_vehicle(db, db_vehicle.id)
+

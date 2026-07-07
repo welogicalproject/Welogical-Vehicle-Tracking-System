@@ -33,9 +33,14 @@ app = FastAPI(
 
 # Configure CORS Middleware
 origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+# Add explicit support for production Vercel domain to ensure it is covered
+if "https://welogical-vehicle-tracking-system.vercel.app" not in origins:
+    origins.append("https://welogical-vehicle-tracking-system.vercel.app")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://welogical-vehicle-tracking-system.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

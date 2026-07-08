@@ -92,12 +92,33 @@ export interface DeviceConfig {
 export interface DeviceCommand {
   id: number;
   vehicle_id: number;
+
+  // New field names (current backend contract)
+  command_type: string;
+  payload: string | null;
+
+  // Legacy aliases — backend serialises both so old components still work
   command_name: string;
   command_value: string | null;
-  status: "PENDING" | "SENT" | "EXECUTED" | "FAILED";
+
+  // Status vocabulary: new lifecycle states
+  status: "Queued" | "Sending" | "Delivered" | "Acknowledged" | "Executing" | "Completed" | "Failed" | "Timed Out" | "Cancelled"
+        | "PENDING" | "SENT" | "EXECUTED";  // legacy values kept for safety
+
+  // Timestamps (new names)
   created_at: string;
   sent_at: string | null;
+  acknowledged_at: string | null;
+  completed_at: string | null;
+
+  // Legacy timestamp alias
   executed_at: string | null;
+
+  // Result fields
+  response: string | null;
+  error_message: string | null;
+
+  // Optional enrichment
   vehicle_name?: string;
 }
 
@@ -105,7 +126,7 @@ export interface CommandLog {
   id: number;
   command_id: number;
   vehicle_id: number;
-  status: "PENDING" | "SENT" | "EXECUTED" | "FAILED";
+  status: string;
   message: string | null;
   created_at: string;
 }

@@ -24,10 +24,10 @@ export function CommandQueueTable({
 }: CommandQueueTableProps) {
   const commandGroups = useMemo(() => {
     return {
-      PENDING: commands.filter((command) => command.status === "PENDING"),
-      SENT: commands.filter((command) => command.status === "SENT"),
-      EXECUTED: commands.filter((command) => command.status === "EXECUTED"),
-      FAILED: commands.filter((command) => command.status === "FAILED"),
+      Queued:    commands.filter((c) => c.status === "Queued" || c.status === "PENDING"),
+      Active:    commands.filter((c) => ["Sending", "Delivered", "Acknowledged", "Executing", "SENT"].includes(c.status)),
+      Completed: commands.filter((c) => c.status === "Completed" || c.status === "EXECUTED"),
+      Failed:    commands.filter((c) => ["Failed", "Timed Out", "Cancelled", "FAILED"].includes(c.status)),
     };
   }, [commands]);
 
@@ -86,8 +86,8 @@ export function CommandQueueTable({
                     {cmd.vehicle_name || `Vehicle #${cmd.vehicle_id}`}
                   </TableCell>
                   <TableCell className="font-mono text-xs text-cyan-400 py-3.5 text-left">
-                    {cmd.command_name}
-                    {cmd.command_value ? `=${cmd.command_value}` : ""}
+                    {cmd.command_type || cmd.command_name}
+                    {(cmd.payload || cmd.command_value) ? `=${cmd.payload ?? cmd.command_value}` : ""}
                   </TableCell>
                   <TableCell className="py-3.5 text-left">
                     <CommandStatusBadge status={cmd.status} />

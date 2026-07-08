@@ -190,24 +190,37 @@ export const api = {
   },
 
   getVehicleCommands: (vehicleId: number, status?: string, skip = 0, limit = 100): Promise<DeviceCommand[]> => {
-    let path = `/commands/${vehicleId}?skip=${skip}&limit=${limit}`;
-    if (status) path += `&status=${status}`;
+    // Uses the list endpoint with vehicle_id as a QUERY param (not a path segment)
+    let path = `/commands?vehicle_id=${vehicleId}&skip=${skip}&limit=${limit}`;
+    if (status) path += `&status=${encodeURIComponent(status)}`;
     return request<DeviceCommand[]>(path);
   },
 
-  queueCommand: (command: Omit<DeviceCommand, "id" | "status" | "created_at" | "sent_at" | "executed_at">): Promise<DeviceCommand> =>
+  queueCommand: (command: { vehicle_id: number; command_name?: string; command_type?: string; command_value?: string | null; payload?: string | null }): Promise<DeviceCommand> =>
     request<DeviceCommand>("/commands", {
       method: "POST",
       body: JSON.stringify(command),
     }),
 
-  deleteCommand: (commandId: number): Promise<DeviceCommand> =>
-    request<DeviceCommand>(`/commands/${commandId}`, {
-      method: "DELETE",
-    }),
+  cancelCommand: (commandId: number): Promise<{ status: string }> =>
+    request<{ status: string }>(`/commands/${commandId}/cancel`, { method: "POST" }),
+
+  deleteCommand: (commandId: number): Promise<{ status: string }> =>
+    request<{ status: string }>(`/commands/${commandId}`, { method: "DELETE" }),
 
   getCommandLogs: (commandId: number): Promise<CommandLog[]> =>
     request<CommandLog[]>(`/commands/${commandId}/logs`),
+
+  // Quick-action commands
+  restartDevice: (vehicleId: number): Promise<{ status: string; command_id: number }> =>
+    request<{ status: string; command_id: number }>(`/vehicles/${vehicleId}/restart`, { method: "POST" }),
+
+  immobilizeVehicle: (vehicleId: number): Promise<{ status: string; command_id: number }> =>
+    request<{ status: string; command_id: number }>(`/vehicles/${vehicleId}/immobilize`, { method: "POST" }),
+
+  restoreVehicle: (vehicleId: number): Promise<{ status: string; command_id: number }> =>
+    request<{ status: string; command_id: number }>(`/vehicles/${vehicleId}/restore`, { method: "POST" }),
+
 
   // Trips & Replay Analytics
   getVehicleTrips: (

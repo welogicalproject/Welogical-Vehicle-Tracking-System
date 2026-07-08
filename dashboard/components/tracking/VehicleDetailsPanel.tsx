@@ -7,7 +7,7 @@ import { MetricRow } from "../shared/MetricRow";
 import { TrackingDetailTab } from "../../hooks/useVehicleSelection";
 import { VehicleTrackingSnapshot } from "../../types";
 import { cn } from "../../lib/utils";
-import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal } from "../../utils/tracking";
+import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal, getFuelLevel } from "../../utils/tracking";
 
 interface VehicleDetailsPanelProps {
   selectedVehicleId: number | "all";
@@ -100,7 +100,7 @@ export function VehicleDetailsPanel({
                   <MetricRow label="Main Voltage" val={getMainVolt(selectedSnapshot)} icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />} />
                   <MetricRow label="Network" val={getNetworkStatus(selectedSnapshot)} icon={<Globe className="h-3.5 w-3.5 text-cyan-400" />} />
                   <MetricRow label="Odometer" val={getOdometerKm(selectedSnapshot)} icon={<Route className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Fuel Level" val="N/A" icon={<SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />} />
+                  <MetricRow label="Fuel Level" val={getFuelLevel(selectedSnapshot)} icon={<SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />} />
                   <MetricRow label="Driver" val="N/A" icon={<Users className="h-3.5 w-3.5 text-cyan-400" />} />
                 </div>
               )}

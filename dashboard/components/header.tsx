@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, User } from "lucide-react";
+import { Bell, User, Menu } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
@@ -26,18 +26,26 @@ export function Header() {
   };
 
   return (
-    <header className="h-16 border-b border-[#1e294b]/60 bg-[#0b0f19] px-8 flex items-center justify-between sticky top-0 z-20">
+    <header className="h-16 border-b border-[#1e294b]/60 bg-[#0b0f19] px-4 md:px-8 flex items-center justify-between sticky top-0 z-20 shrink-0">
       {/* View Title */}
-      <div>
-        <h1 className="text-xl font-bold text-white tracking-wide">
+      <div className="flex items-center min-w-0">
+        {/* Mobile Hamburger menu */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("toggle-sidebar-drawer"))}
+          className="md:hidden mr-3 p-1.5 hover:bg-[#1e294b]/60 rounded-lg text-slate-400 hover:text-white transition-colors"
+          aria-label="Toggle Navigation Sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="text-sm md:text-xl font-bold text-white tracking-wide truncate">
           {getPageTitle()}
         </h1>
       </div>
 
       {/* Notifications & Admin Profile */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6 shrink-0">
         {/* Notification Icon */}
-        <button className="relative p-2 text-slate-400 hover:text-white bg-[#131a2d]/40 hover:bg-[#1e294b]/40 border border-[#1e294b]/40 rounded-lg transition-all">
+        <button className="relative p-2 text-slate-400 hover:text-white bg-[#131a2d]/40 hover:bg-[#1e294b]/40 border border-[#1e294b]/40 rounded-lg transition-all animate-in fade-in duration-200">
           <Bell className="h-4.5 w-4.5" />
           <span className="absolute -top-1 -right-1 h-4 w-4 bg-rose-500 rounded-full flex items-center justify-center text-[9px] font-extrabold text-white animate-pulse">
             8
@@ -46,7 +54,7 @@ export function Header() {
 
         {/* User Profile Container */}
         <div className="flex items-center gap-3 pl-2 border-l border-[#1e294b]/60">
-          <div className="text-right">
+          <div className="hidden sm:block text-right">
             <div className="text-xs font-bold text-white leading-tight">Admin</div>
             <div className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase leading-tight">
               Administrator

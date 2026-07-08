@@ -49,6 +49,12 @@ export const api = {
   getStats: (): Promise<SystemStats> => 
     request<SystemStats>("/system/stats"),
 
+  getFleetAnalyticsToday: (): Promise<any> =>
+    request<any>("/analytics/fleet/today"),
+
+  getVehicleAnalyticsToday: (id: number): Promise<any> =>
+    request<any>(`/analytics/vehicle/${id}/today`),
+
   // Vehicles
   getVehicles: (skip = 0, limit = 100): Promise<Vehicle[]> => 
     request<Vehicle[]>(`/vehicles?skip=${skip}&limit=${limit}`),

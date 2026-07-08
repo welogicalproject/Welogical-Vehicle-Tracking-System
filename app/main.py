@@ -17,18 +17,120 @@ from app.routers import (
     device_command_router,
     trip_router,
     driver_router,
-    route_router
+    route_router,
+    analytics_router,
+    operations_router,
+    reports_router,
+    notifications_router,
+    websocket_router
 )
+import asyncio
+import os
+import sys
+from contextlib import asynccontextmanager
 
 # Setup application loggers
 setup_logging()
+
+# Global references for telemetry simulator supervisor
+simulator_task = None
+simulator_process = None
+should_run_simulator = True
+websocket_heartbeat_task = None
+
+async def monitor_simulator():
+    """Asynchronous background task supervising the simulator subprocess."""
+    global simulator_process, should_run_simulator
+    
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    simulator_script = os.path.join(base_dir, "scripts", "simulator", "simulator.py")
+    
+    # Inherit existing environment variables
+    env = os.environ.copy()
+    if "LOG_LEVEL" not in env:
+        env["LOG_LEVEL"] = "INFO"
+    if "LOOP_ROUTE" not in env:
+        env["LOOP_ROUTE"] = "true"
+        
+    # Resolve API URL dynamically as per instructions
+    if "API_URL" not in env:
+        if settings.APP_ENV == "production" or os.environ.get("RENDER") == "true":
+            env["API_URL"] = "https://welogical-vehicle-tracking-system.onrender.com"
+        else:
+            env["API_URL"] = f"http://127.0.0.1:{settings.PORT}"
+            
+    print(f"[SYSTEM] Starting simulator supervisor. API_URL={env.get('API_URL')}, LOG_LEVEL={env.get('LOG_LEVEL')}")
+    
+    while should_run_simulator:
+        try:
+            print("[SYSTEM] Spawning telemetry simulator subprocess...")
+            simulator_process = await asyncio.create_subprocess_exec(
+                sys.executable, simulator_script,
+                env=env
+            )
+            
+            # Wait for subprocess termination asynchronously
+            exit_code = await simulator_process.wait()
+            
+            if not should_run_simulator:
+                break
+                
+            print(f"[SYSTEM WARNING] Telemetry simulator process exited unexpectedly with code {exit_code}.")
+            print("[SYSTEM] Waiting 5 seconds before restarting...")
+            await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[SYSTEM ERROR] Error in telemetry simulator supervisor: {e}")
+            await asyncio.sleep(5)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global simulator_task, should_run_simulator, websocket_heartbeat_task
+    from app.services.websocket_manager import ws_manager
+    websocket_heartbeat_task = asyncio.create_task(ws_manager.run_heartbeat_loop())
+    
+    if settings.SIMULATOR_ENABLED:
+        should_run_simulator = True
+        simulator_task = asyncio.create_task(monitor_simulator())
+    yield
+    # Shutdown logic
+    should_run_simulator = False
+    if websocket_heartbeat_task:
+        websocket_heartbeat_task.cancel()
+        try:
+            await websocket_heartbeat_task
+        except asyncio.CancelledError:
+            pass
+    if simulator_task:
+        print("[SYSTEM] Cancelling simulator supervisor task...")
+        simulator_task.cancel()
+        try:
+            await simulator_task
+        except asyncio.CancelledError:
+            pass
+    if simulator_process:
+        print("[SYSTEM] Terminating telemetry simulator subprocess...")
+        try:
+            simulator_process.terminate()
+            # Wait for clean termination
+            for _ in range(10):
+                if simulator_process.returncode is not None:
+                    break
+                await asyncio.sleep(0.5)
+            if simulator_process.returncode is None:
+                print("[SYSTEM WARNING] Simulator subprocess did not exit. Force killing...")
+                simulator_process.kill()
+        except Exception as e:
+            print(f"[SYSTEM ERROR] Error terminating simulator process: {e}")
 
 # Initialize FastAPI instance
 app = FastAPI(
     title=settings.APP_NAME,
     description="Backend API for logging, tracking, and querying real-time vehicle GPS coordinates & telemetry",
     version="1.0.0",
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    lifespan=lifespan
 )
 
 # Configure CORS Middleware
@@ -60,6 +162,11 @@ app.include_router(device_command_router)
 app.include_router(trip_router)
 app.include_router(driver_router)
 app.include_router(route_router)
+app.include_router(analytics_router)
+app.include_router(operations_router)
+app.include_router(reports_router)
+app.include_router(notifications_router)
+app.include_router(websocket_router)
 
 
 @app.get("/")

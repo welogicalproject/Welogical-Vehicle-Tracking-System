@@ -80,7 +80,7 @@ export function ExplorerToolbar({
       <button
         onClick={onRefresh}
         disabled={refreshing}
-        className="flex items-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all shrink-0"
+        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all shrink-0"
       >
         <RefreshCw className={cn("h-3.5 w-3.5", refreshing ? "animate-spin" : "")} />
         Refresh Explorer

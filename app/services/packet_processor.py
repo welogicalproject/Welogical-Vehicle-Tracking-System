@@ -54,6 +54,20 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
         if packet.dbg:
             extra_data["dbg"] = packet.dbg.model_dump()
 
+        # Capture extra dynamic telemetry objects (Telemetry Spec v2 fields like fuel, power, engine)
+        if packet.model_extra:
+            for k, v in packet.model_extra.items():
+                extra_data[k] = v
+
+        # Query previous location before saving the new one
+        prev_loc_res = await db.execute(
+            select(Location)
+            .where(Location.vehicle_id == vehicle.id)
+            .order_by(Location.timestamp.desc())
+            .limit(1)
+        )
+        prev_location = prev_loc_res.scalars().first()
+
         db_location = Location(
             vehicle_id=vehicle.id,
             latitude=packet.gps.loc[0],
@@ -66,6 +80,25 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
         db.add(db_location)
         log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "LOCATION_INSERT", start_time, "SUCCESS")
 
+        # Broadcast real-time telemetry coordinates
+        from app.services.websocket_manager import ws_manager
+        await ws_manager.broadcast("telemetry", {
+            "vehicle_id": vehicle.id,
+            "latitude": db_location.latitude,
+            "longitude": db_location.longitude,
+            "speed": db_location.speed,
+            "timestamp": str(db_location.timestamp),
+            "extra_data": db_location.extra_data
+        })
+        await ws_manager.broadcast(f"vehicle/{vehicle.id}", {
+            "vehicle_id": vehicle.id,
+            "latitude": db_location.latitude,
+            "longitude": db_location.longitude,
+            "speed": db_location.speed,
+            "timestamp": str(db_location.timestamp),
+            "extra_data": db_location.extra_data
+        })
+
         # 3. Update vehicle last_seen
         db_last_seen = vehicle.last_seen
         if db_last_seen and db_last_seen.tzinfo is not None:
@@ -77,9 +110,38 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
             vehicle.last_seen = ctx.timestamp
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "UPDATE_LAST_SEEN", start_time, "SUCCESS")
 
-        # 4. Decode Warning & Critical events
+        # 4. Decode Warning & Critical events (Legacy decoder and new transition-based EventEngine)
         try:
+            # Execute legacy event decoder
             await decode_and_save_event(db, vehicle.id, packet)
+            
+            # Execute new transition-based EventEngine
+            from app.services.event_engine import EventEngine
+            engine = EventEngine()
+            events = await engine.process_telemetry(db, prev_location, db_location)
+
+            # Evaluate notifications for any generated transition events
+            if events:
+                from app.services.notifications import get_notification_manager
+                notif_manager = get_notification_manager()
+                
+                def evaluate_notifs_sync(session):
+                    for event in events:
+                        notif_manager.evaluate_event(session, event)
+                
+                await db.run_sync(evaluate_notifs_sync)
+
+                # Broadcast events
+                for event in events:
+                    await ws_manager.broadcast("events", {
+                        "id": event.id,
+                        "vehicle_id": event.vehicle_id,
+                        "event_type": event.event_type,
+                        "severity": event.severity,
+                        "description": event.description,
+                        "created_at": str(event.created_at)
+                    })
+
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "EVENT_ENGINE", start_time, "SUCCESS")
         except Exception as e:
             logger.error(f"Event Engine failed inside background job for vehicle={vehicle.id}: {e}", exc_info=True)

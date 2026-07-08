@@ -51,6 +51,11 @@ class VTSPacket(BaseModel):
     pwr: Optional[VTSPwr] = Field(None, description="Power and voltage status object")
     dbg: Optional[VTSDbg] = Field(None, description="Debugging and system hardware version object")
 
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True
+    )
+
 
 class VTSResponse(BaseModel):
     result: bool = Field(True, description="Indicates if telemetry packet was successfully recorded")

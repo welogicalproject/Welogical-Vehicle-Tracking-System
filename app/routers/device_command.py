@@ -1,19 +1,19 @@
+from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
 from app.database import get_db
-from app.schemas.device_command import DeviceCommandCreate, DeviceCommandUpdate, DeviceCommandResponse
-from app.schemas.command_log import CommandLogResponse
-from app.models.enums import CommandStatus
-import app.crud.device_command as crud_command
+from app.models.device_command import DeviceCommand
+from app.models.command_log import CommandLog
+from app.services.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/commands", tags=["Commands"])
+router = APIRouter(tags=["Commands"])
 
-
-@router.get("", response_model=List[DeviceCommandResponse], status_code=status.HTTP_200_OK)
+@router.get("/commands")
 async def list_commands(
-    vehicle_id: Optional[int] = Query(None, description="Filter commands by vehicle ID"),
-    status_filter: Optional[CommandStatus] = Query(None, alias="status", description="Filter by status: PENDING, SENT, EXECUTED, FAILED"),
+    vehicle_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: AsyncSession = Depends(get_db)
@@ -21,111 +21,236 @@ async def list_commands(
     """
     Retrieve queued device commands with options to filter by vehicle or status.
     """
-    return await crud_command.list_commands(
-        db,
-        vehicle_id=vehicle_id,
-        status=status_filter,
-        skip=skip,
-        limit=limit
-    )
+    stmt = select(DeviceCommand)
+    if vehicle_id is not None:
+        stmt = stmt.where(DeviceCommand.vehicle_id == vehicle_id)
+    if status is not None:
+        stmt = stmt.where(DeviceCommand.status == status)
+        
+    stmt = stmt.order_by(desc(DeviceCommand.created_at)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    commands = result.scalars().all()
+    return [
+        {
+            "id": c.id,
+            "vehicle_id": c.vehicle_id,
+            "command_type": c.command_type,
+            "payload": c.payload,
+            "status": c.status,
+            "created_at": str(c.created_at),
+            "sent_at": str(c.sent_at) if c.sent_at else None,
+            "acknowledged_at": str(c.acknowledged_at) if c.acknowledged_at else None,
+            "completed_at": str(c.completed_at) if c.completed_at else None,
+            "response": c.response,
+            "error_message": c.error_message
+        }
+        for c in commands
+    ]
 
+@router.get("/commands/{command_id}")
+async def get_command_by_id(command_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Retrieve single command parameters and status triggers.
+    """
+    result = await db.execute(select(DeviceCommand).where(DeviceCommand.id == command_id))
+    c = result.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Command not found.")
+    return {
+        "id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "payload": c.payload,
+        "status": c.status,
+        "created_at": str(c.created_at),
+        "sent_at": str(c.sent_at) if c.sent_at else None,
+        "acknowledged_at": str(c.acknowledged_at) if c.acknowledged_at else None,
+        "completed_at": str(c.completed_at) if c.completed_at else None,
+        "response": c.response,
+        "error_message": c.error_message
+    }
 
-@router.get("/{vehicle_id}", response_model=List[DeviceCommandResponse], status_code=status.HTTP_200_OK)
-async def get_commands_by_vehicle(
+@router.post("/commands", status_code=status.HTTP_201_CREATED)
+async def create_command(
     vehicle_id: int,
-    status_filter: Optional[CommandStatus] = Query(None, alias="status", description="Filter by status"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    command_type: str,
+    payload: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieve command queue history associated with a specific vehicle.
+    Queue a new command request. Initial state is 'Queued'.
     """
-    return await crud_command.list_commands(
-        db,
+    # Map command_type parameter to legacy values where applicable
+    c = DeviceCommand(
         vehicle_id=vehicle_id,
-        status=status_filter,
-        skip=skip,
-        limit=limit
+        command_type=command_type,
+        payload=payload,
+        status="Queued"
     )
+    db.add(c)
+    await db.commit()
+    await db.refresh(c)
+    
+    # Broadcast to command topic channel
+    await ws_manager.broadcast("commands", {
+        "event": "command_created",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "status": c.status
+    })
+    
+    return {
+        "id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "payload": c.payload,
+        "status": c.status,
+        "created_at": str(c.created_at)
+    }
 
+@router.post("/commands/{command_id}/cancel")
+async def cancel_command(command_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Cancel an execution command.
+    """
+    result = await db.execute(select(DeviceCommand).where(DeviceCommand.id == command_id))
+    c = result.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Command not found.")
+    
+    c.status = "Cancelled"
+    await db.commit()
+    
+    await ws_manager.broadcast("commands", {
+        "event": "command_failed",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "status": c.status,
+        "error_message": "Command cancelled by dispatcher"
+    })
+    return {"status": "success", "message": "Command successfully cancelled."}
 
-@router.post("", response_model=DeviceCommandResponse, status_code=status.HTTP_201_CREATED)
-async def queue_new_command(
-    command_in: DeviceCommandCreate,
+@router.post("/vehicles/{vehicle_id}/restart")
+async def restart_vehicle_device(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Queue reboot command to target tracker.
+    """
+    c = DeviceCommand(vehicle_id=vehicle_id, command_type="Restart Device", status="Queued")
+    db.add(c)
+    await db.commit()
+    await db.refresh(c)
+    await ws_manager.broadcast("commands", {
+        "event": "command_created",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "status": c.status
+    })
+    return {"status": "success", "command_id": c.id}
+
+@router.post("/vehicles/{vehicle_id}/immobilize")
+async def immobilize_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Queue immobilization cut-off command to vehicle relay.
+    """
+    c = DeviceCommand(vehicle_id=vehicle_id, command_type="Immobilize Vehicle", status="Queued")
+    db.add(c)
+    await db.commit()
+    await db.refresh(c)
+    await ws_manager.broadcast("commands", {
+        "event": "command_created",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "status": c.status
+    })
+    return {"status": "success", "command_id": c.id}
+
+@router.post("/vehicles/{vehicle_id}/restore")
+async def restore_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Queue restore command to reconnect vehicle relay.
+    """
+    c = DeviceCommand(vehicle_id=vehicle_id, command_type="Restore Vehicle", status="Queued")
+    db.add(c)
+    await db.commit()
+    await db.refresh(c)
+    await ws_manager.broadcast("commands", {
+        "event": "command_created",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "command_type": c.command_type,
+        "status": c.status
+    })
+    return {"status": "success", "command_id": c.id}
+
+# --- TRACKER BIDIRECTIONAL ACK / STATUS REST INTERFACES ---
+@router.patch("/commands/{command_id}/acknowledge")
+async def acknowledge_command_state(command_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(DeviceCommand).where(DeviceCommand.id == command_id))
+    c = result.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Command not found.")
+        
+    c.status = "Acknowledged"
+    c.acknowledged_at = datetime.utcnow()
+    await db.commit()
+    
+    await ws_manager.broadcast("commands", {
+        "event": "command_ack",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "status": c.status
+    })
+    return {"status": "success"}
+
+@router.patch("/commands/{command_id}/complete")
+async def complete_command_state(
+    command_id: int, 
+    response_payload: Optional[str] = Query(None, alias="response"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Queue a new command for a vehicle. Initial status is PENDING.
-    """
-    return await crud_command.create_command(db, command_in=command_in)
+    result = await db.execute(select(DeviceCommand).where(DeviceCommand.id == command_id))
+    c = result.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Command not found.")
+        
+    c.status = "Completed"
+    c.completed_at = datetime.utcnow()
+    c.response = response_payload or "Execution success"
+    await db.commit()
+    
+    await ws_manager.broadcast("commands", {
+        "event": "command_completed",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "status": c.status,
+        "response": c.response
+    })
+    return {"status": "success"}
 
-
-@router.put("/{id}/send", response_model=DeviceCommandResponse, status_code=status.HTTP_200_OK)
-async def mark_command_as_sent(
-    id: int,
-    message: Optional[str] = Query(None, description="Descriptive log message detailing delivery context"),
+@router.patch("/commands/{command_id}/fail")
+async def fail_command_state(
+    command_id: int,
+    error_message: str = Query(..., alias="error"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Transition command status from PENDING to SENT and update delivery timestamp.
-    """
-    update_data = DeviceCommandUpdate(
-        status=CommandStatus.SENT,
-        message=message or "Command delivered to device via telemetry response"
-    )
-    return await crud_command.update_status(db, command_id=id, status_update=update_data)
-
-
-@router.put("/{id}/execute", response_model=DeviceCommandResponse, status_code=status.HTTP_200_OK)
-async def mark_command_as_executed(
-    id: int,
-    message: Optional[str] = Query(None, description="Descriptive log message detailing execution result"),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Transition command status from SENT to EXECUTED, set execution timestamp, and trigger associated events.
-    """
-    update_data = DeviceCommandUpdate(
-        status=CommandStatus.EXECUTED,
-        message=message or "Acknowledge code received from hardware device"
-    )
-    return await crud_command.update_status(db, command_id=id, status_update=update_data)
-
-
-@router.put("/{id}/fail", response_model=DeviceCommandResponse, status_code=status.HTTP_200_OK)
-async def mark_command_as_failed(
-    id: int,
-    message: str = Query(..., description="Details regarding why execution failed"),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Transition command status to FAILED, record execution timestamp, and trigger audit logging.
-    """
-    update_data = DeviceCommandUpdate(
-        status=CommandStatus.FAILED,
-        message=message
-    )
-    return await crud_command.update_status(db, command_id=id, status_update=update_data)
-
-
-@router.delete("/{id}", response_model=DeviceCommandResponse, status_code=status.HTTP_200_OK)
-async def delete_queued_command(
-    id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Delete a command from the queue.
-    """
-    return await crud_command.delete_command(db, command_id=id)
-
-
-@router.get("/{id}/logs", response_model=List[CommandLogResponse], status_code=status.HTTP_200_OK)
-async def get_command_audit_logs(
-    id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Retrieve the historical lifecycle logs for a specific command.
-    """
-    return await crud_command.get_command_logs(db, command_id=id)
+    result = await db.execute(select(DeviceCommand).where(DeviceCommand.id == command_id))
+    c = result.scalars().first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Command not found.")
+        
+    c.status = "Failed"
+    c.error_message = error_message
+    await db.commit()
+    
+    await ws_manager.broadcast("commands", {
+        "event": "command_failed",
+        "command_id": c.id,
+        "vehicle_id": c.vehicle_id,
+        "status": c.status,
+        "error_message": c.error_message
+    })
+    return {"status": "success"}

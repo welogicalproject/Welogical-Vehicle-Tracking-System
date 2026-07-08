@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     PORT: int = 8000
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Telemetry Simulator settings
+    SIMULATOR_ENABLED: bool = False
+
     # Database settings
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vts_db"
     ASYNC_DATABASE_URL: str = ""

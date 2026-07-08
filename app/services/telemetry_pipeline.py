@@ -85,7 +85,7 @@ async def run_synchronous_telemetry_pipeline(
         cmd_stmt = select(DeviceCommand).where(
             and_(
                 DeviceCommand.vehicle_id == vehicle.id,
-                DeviceCommand.status == CommandStatus.PENDING
+                DeviceCommand.status == "Queued"
             )
         ).order_by(asc(DeviceCommand.created_at)).limit(1)
         cmd_res = await db.execute(cmd_stmt)
@@ -93,13 +93,13 @@ async def run_synchronous_telemetry_pipeline(
 
         cmd_payload = None
         if pending_cmd:
-            pending_cmd.status = CommandStatus.SENT
+            pending_cmd.status = "Delivered"
             pending_cmd.sent_at = datetime.utcnow()
             
             cmd_log = CommandLog(
                 command_id=pending_cmd.id,
                 vehicle_id=vehicle.id,
-                status=CommandStatus.SENT,
+                status="Delivered",
                 message="Delivered to device in HTTP telemetry response payload"
             )
             db.add(cmd_log)

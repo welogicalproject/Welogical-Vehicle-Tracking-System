@@ -208,7 +208,9 @@ def load_route_from_file(filepath):
 
 def find_local_route_files():
     """Locates any JSON, CSV, or GPX files in the local routes folder."""
-    routes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes")
+    routes_dir = os.environ.get("ROUTE_DIRECTORY")
+    if not routes_dir:
+        routes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes")
     if not os.path.exists(routes_dir):
         return []
     files = []
@@ -273,8 +275,487 @@ def api_request(path, method="GET", data=None, max_retries=None, backoff_seconds
         backoff_seconds = min(10.0, backoff_seconds * 1.5)
 
 # --- SIMULATION STATE ---
+## Vehicle State definitions
+class VehicleStateEnum:
+    PARKED = "Parked"
+    IDLE = "Idle"
+    DRIVING = "Driving"
+    STOPPED_IN_TRAFFIC = "Stopped in Traffic"
+    POWER_FAILURE = "Power Failure"
+    RECOVERING = "Recovering"
+
+class EngineStateEnum:
+    OFF = "OFF"
+    STARTING = "STARTING"
+    IDLE = "IDLE"
+    RUNNING = "RUNNING"
+    STOPPING = "STOPPING"
+
+class VehicleProfile:
+    """Stores behavior configuration profiles for simulated vehicles."""
+    def __init__(self, name, cruising_speed_min, cruising_speed_max, max_speed, 
+                 accel_rate, brake_rate, traffic_stop_prob, engine_start_prob, 
+                 engine_stop_prob, power_failure_prob, battery_health, driving_style,
+                 fuel_capacity=60.0):
+        self.name = name
+        self.cruising_speed_min = cruising_speed_min
+        self.cruising_speed_max = cruising_speed_max
+        self.max_speed = max_speed
+        self.accel_rate = accel_rate
+        self.brake_rate = brake_rate
+        self.traffic_stop_prob = traffic_stop_prob
+        self.engine_start_prob = engine_start_prob
+        self.engine_stop_prob = engine_stop_prob
+        self.power_failure_prob = power_failure_prob
+        self.battery_health = battery_health # 0.0 - 1.0 (influences battery capacity decay)
+        self.driving_style = driving_style # "calm", "normal", "aggressive"
+        self.fuel_capacity = fuel_capacity
+
+# Define standard behavioral profiles
+VEHICLE_PROFILES = [
+    VehicleProfile("Calm City Driver", 30.0, 45.0, 60.0, 1.5, 2.5, 0.05, 0.05, 0.08, 0.00, 0.98, "calm", 50.0),
+    VehicleProfile("Highway Vehicle", 70.0, 90.0, 110.0, 3.5, 4.0, 0.02, 0.08, 0.05, 0.01, 0.95, "normal", 70.0),
+    VehicleProfile("Delivery Vehicle", 25.0, 55.0, 80.0, 2.5, 3.0, 0.20, 0.12, 0.15, 0.01, 0.90, "normal", 60.0),
+    VehicleProfile("Old Vehicle", 35.0, 60.0, 85.0, 2.0, 2.8, 0.08, 0.05, 0.08, 0.04, 0.65, "aggressive", 55.0)
+]
+
+# --- VEHICLE DIGITAL TWIN INDEPENDENT SUBSYSTEMS ---
+
+class PowerSystem:
+    """Manages main supply voltage, backup battery levels, and power cuts."""
+    def __init__(self, profile: VehicleProfile):
+        self.profile = profile
+        self.main_power_ok = True
+        self.power_failure_cooldown = random.randint(30, 80)
+        self.power_failure_ticks = 0
+        self.mvolt = 12.4
+        self.volt = 4180.0
+        self.power_transition_pending = False
+
+    def update(self, state, current_ign):
+        if state != VehicleStateEnum.POWER_FAILURE:
+            self.power_failure_cooldown -= 1
+            if self.power_failure_cooldown <= 0:
+                if random.random() < self.profile.power_failure_prob:
+                    self.main_power_ok = False
+                    self.power_failure_ticks = random.randint(5, 12)
+                    self.power_transition_pending = True
+                    return
+        else:
+            self.power_failure_ticks -= 1
+            if self.power_failure_ticks <= 0:
+                self.main_power_ok = True
+                self.power_transition_pending = True
+                self.power_failure_cooldown = random.randint(30, 80)
+
+        # Alternator charging vs settled discharge
+        if not self.main_power_ok:
+            self.mvolt = 0.0
+            drain_rate = random.uniform(8.0, 18.0) * (2.0 - self.profile.battery_health)
+            self.volt = max(3500.0, self.volt - drain_rate)
+        else:
+            target_mvolt = random.uniform(13.8, 14.2) if current_ign == 1 else random.uniform(12.2, 12.6)
+            diff = target_mvolt - self.mvolt
+            self.mvolt += max(-0.08, min(0.08, diff))
+            if self.volt < 4200.0:
+                self.volt = min(4200.0, self.volt + random.uniform(5.0, 15.0))
+
+class EngineSystem:
+    """Simulates engine thermal properties, load limits, and state machines."""
+    def __init__(self, profile: VehicleProfile):
+        self.profile = profile
+        self.state = EngineStateEnum.OFF
+        self.coolant_temperature = 25.0  # Starts ambient
+        self.load = 0.0
+        self.state_ticks = 0
+
+    def update(self, ign, motion_state, speed, max_speed, accel):
+        # Engine state machine
+        if self.state == EngineStateEnum.OFF:
+            if ign == 1:
+                self.state = EngineStateEnum.STARTING
+                self.state_ticks = 1
+        elif self.state == EngineStateEnum.STARTING:
+            self.state_ticks -= 1
+            if self.state_ticks <= 0:
+                self.state = EngineStateEnum.IDLE
+        elif self.state == EngineStateEnum.IDLE:
+            if ign == 0:
+                self.state = EngineStateEnum.STOPPING
+                self.state_ticks = 1
+            elif motion_state == VehicleStateEnum.DRIVING and speed > 1.0:
+                self.state = EngineStateEnum.RUNNING
+        elif self.state == EngineStateEnum.RUNNING:
+            if ign == 0:
+                self.state = EngineStateEnum.STOPPING
+                self.state_ticks = 1
+            elif motion_state in (VehicleStateEnum.IDLE, VehicleStateEnum.STOPPED_IN_TRAFFIC) or speed <= 1.0:
+                self.state = EngineStateEnum.IDLE
+        elif self.state == EngineStateEnum.STOPPING:
+            self.state_ticks -= 1
+            if self.state_ticks <= 0:
+                self.state = EngineStateEnum.OFF
+
+        # Target-based Thermal Model: temp += (target - current) * thermal_rate
+        target_temp = 25.0
+        thermal_rate = 0.05
+        if self.state in (EngineStateEnum.STARTING, EngineStateEnum.IDLE, EngineStateEnum.RUNNING):
+            target_temp = 90.0
+            if self.state == EngineStateEnum.RUNNING:
+                target_temp += (self.load / 100.0) * 8.0
+            thermal_rate = 0.06
+        else:
+            target_temp = 25.0
+            thermal_rate = 0.03
+
+        self.coolant_temperature += (target_temp - self.coolant_temperature) * thermal_rate
+        self.coolant_temperature = max(25.0, min(105.0, self.coolant_temperature))
+
+        # Engine load calculations
+        if self.state in (EngineStateEnum.OFF, EngineStateEnum.STOPPING):
+            self.load = 0.0
+        elif self.state in (EngineStateEnum.STARTING, EngineStateEnum.IDLE):
+            self.load = random.uniform(8.0, 15.0)
+        elif self.state == EngineStateEnum.RUNNING:
+            base_load = 15.0
+            speed_factor = (speed / max_speed) * 45.0
+            accel_factor = max(-10.0, min(25.0, accel * 8.0))
+            self.load = max(5.0, min(100.0, base_load + speed_factor + accel_factor))
+
+class TransmissionSystem:
+    """Selects appropriate gear based on speed, load, and acceleration."""
+    def __init__(self):
+        self.gear = "P"
+
+    def update(self, engine_state, speed, load, accel):
+        if engine_state == EngineStateEnum.OFF:
+            self.gear = "P"
+            return
+        if engine_state in (EngineStateEnum.STARTING, EngineStateEnum.STOPPING):
+            self.gear = "N"
+            return
+        if speed == 0.0:
+            self.gear = "N" if engine_state == EngineStateEnum.IDLE else "D1"
+            return
+
+        # Heavy loads hold lower gears longer (shift later)
+        load_modifier = (load / 100.0) * 8.0
+        accel_modifier = max(0.0, accel * 2.0)
+        shift_offset = load_modifier + accel_modifier
+
+        if speed < 15.0 + shift_offset:
+            self.gear = "D1"
+        elif speed < 30.0 + shift_offset:
+            self.gear = "D2"
+        elif speed < 45.0 + shift_offset:
+            self.gear = "D3"
+        elif speed < 60.0 + shift_offset:
+            self.gear = "D4"
+        elif speed < 75.0 + shift_offset:
+            self.gear = "D5"
+        else:
+            self.gear = "D6"
+
+class RPMSystem:
+    """Calculates engine RPM depending on speed, selected gear, and engine load."""
+    def __init__(self):
+        self.rpm = 0
+
+    def update(self, engine_state, gear, speed, load, accel):
+        if engine_state == EngineStateEnum.OFF:
+            self.rpm = 0
+            return
+        if engine_state == EngineStateEnum.STARTING:
+            self.rpm = random.randint(1100, 1300)  # Crank starter spike
+            return
+        if engine_state == EngineStateEnum.STOPPING:
+            self.rpm = max(0, self.rpm - 300)
+            return
+        if engine_state == EngineStateEnum.IDLE or gear in ("P", "N"):
+            self.rpm = random.randint(750, 850)
+            return
+
+        gear_num = 1
+        if len(gear) > 1 and gear[1].isdigit():
+            gear_num = int(gear[1])
+
+        base_ratio = 130.0 / gear_num
+        target_rpm = 1000.0 + (speed * base_ratio)
+        target_rpm += (load / 100.0) * 800.0
+        target_rpm += max(-200.0, min(600.0, accel * 150.0))
+
+        # Output smooth RPM curves (shifting gear keeps it in bands)
+        self.rpm = int(max(800.0, min(5500.0, target_rpm)))
+
+class FuelSystem:
+    """Simulates a fuel tank, consumption, range, and gradual refueling."""
+    def __init__(self, profile: VehicleProfile, capacity_liters=60.0):
+        self.capacity = capacity_liters if capacity_liters and capacity_liters > 0.0 else profile.fuel_capacity
+        self.current_fuel = self.capacity * random.uniform(0.40, 0.95)
+        self.fuel_pct = (self.current_fuel / self.capacity) * 100.0
+        
+        self.base_consumption = 8.0
+        if profile.driving_style == "aggressive":
+            self.base_consumption = 11.5
+        elif profile.driving_style == "calm":
+            self.base_consumption = 6.5
+            
+        self.is_refueling = False
+        self.fuel_transition_pending = False
+        self.fuel_status_log = "NORMAL"
+
+    def update(self, motion_state, speed, prev_speed, load, rpm, send_interval):
+        if self.is_refueling:
+            refuel_amount = random.uniform(2.5, 4.0)
+            self.current_fuel = min(self.capacity, self.current_fuel + refuel_amount)
+            self.fuel_pct = (self.current_fuel / self.capacity) * 100.0
+            if self.current_fuel >= self.capacity * 0.98:
+                self.current_fuel = self.capacity
+                self.is_refueling = False
+                self.fuel_transition_pending = True
+                self.fuel_status_log = "REFUELED"
+            return
+
+        if self.fuel_pct < 10.0:
+            if motion_state in (VehicleStateEnum.PARKED, VehicleStateEnum.IDLE):
+                if random.random() < 0.20:
+                    self.is_refueling = True
+                    self.fuel_transition_pending = True
+                    self.fuel_status_log = "REFUEL_START"
+                    return
+
+        if motion_state == VehicleStateEnum.PARKED:
+            return
+
+        if motion_state in (VehicleStateEnum.IDLE, VehicleStateEnum.STOPPED_IN_TRAFFIC):
+            # Idle fuel consumption sips fuel
+            idle_rate = (rpm / 1000.0) * 0.7 * (self.base_consumption / 8.0)
+            consumed = (idle_rate / 3600.0) * send_interval
+            self.current_fuel = max(0.0, self.current_fuel - consumed)
+        elif motion_state == VehicleStateEnum.DRIVING:
+            distance_km = (speed / 3600.0) * send_interval
+            dynamic_rate = self.base_consumption * (load / 40.0) * (rpm / 2000.0)
+            dynamic_rate = max(self.base_consumption * 0.5, min(self.base_consumption * 2.5, dynamic_rate))
+            
+            accel = speed - prev_speed
+            if accel > 4.0:
+                dynamic_rate += random.uniform(2.0, 5.0)
+
+            consumed = (dynamic_rate / 100.0) * distance_km
+            self.current_fuel = max(0.0, self.current_fuel - consumed)
+
+        self.fuel_pct = (self.current_fuel / self.capacity) * 100.0
+
+    @property
+    def estimated_range(self):
+        return (self.current_fuel / self.base_consumption) * 100.0
+
+class RuntimeTracker:
+    """Tracks runtimes, including engine, driving, and idling hours."""
+    def __init__(self):
+        self.engine_hours = 0.0
+        self.driving_hours = 0.0
+        self.idle_hours = 0.0
+        self.trip_runtime = 0.0
+
+    def update(self, ign, motion_state, send_interval):
+        interval_hours = send_interval / 3600.0
+        if ign == 1:
+            self.engine_hours += interval_hours
+
+        if motion_state == VehicleStateEnum.DRIVING:
+            self.driving_hours += interval_hours
+            self.trip_runtime += send_interval
+        elif motion_state in (VehicleStateEnum.IDLE, VehicleStateEnum.STOPPED_IN_TRAFFIC):
+            self.idle_hours += interval_hours
+            
+        if motion_state == VehicleStateEnum.PARKED:
+            self.trip_runtime = 0.0
+
+class GPSSystem:
+    """Interpolates coordinate movements and GPS satellite stats."""
+    def __init__(self, start_coord, odometer_start):
+        self.latitude = start_coord[0]
+        self.longitude = start_coord[1]
+        self.heading = 0.0
+        self.odometer = odometer_start
+        self.satellites = 12
+        self.fix = "A"
+        self.last_coord = start_coord
+
+    def update(self, speed, motion, send_interval):
+        travelled = 0.0
+        if speed > 0:
+            travelled = (speed * motion.speed_multiplier * 1000.0 / 3600.0) * send_interval
+            if motion.forward:
+                motion.current_distance_offset += travelled
+                if motion.current_distance_offset >= motion.total_path_distance:
+                    if motion.loop_route:
+                        motion.current_distance_offset = motion.total_path_distance - (motion.current_distance_offset - motion.total_path_distance)
+                        motion.forward = False
+                    else:
+                        motion.current_distance_offset = motion.total_path_distance
+                        motion.completed = True
+                        motion.speed = 0.0
+            else:
+                motion.current_distance_offset -= travelled
+                if motion.current_distance_offset <= 0.0:
+                    if motion.loop_route:
+                        motion.current_distance_offset = abs(motion.current_distance_offset)
+                        motion.forward = True
+                    else:
+                        motion.current_distance_offset = 0.0
+                        motion.completed = True
+                        motion.speed = 0.0
+
+        idx = 0
+        while idx < len(motion.distances) - 2 and motion.distances[idx+1] < motion.current_distance_offset:
+            idx += 1
+            
+        d1 = motion.distances[idx]
+        d2 = motion.distances[idx+1]
+        lat1, lon1 = motion.waypoints[idx]
+        lat2, lon2 = motion.waypoints[idx+1]
+        segment_dist = d2 - d1
+        alpha = (motion.current_distance_offset - d1) / segment_dist if segment_dist > 0.001 else 0.0
+        
+        lat = lat1 + (lat2 - lat1) * alpha
+        lon = lon1 + (lon2 - lon1) * alpha
+        curr_coord = (lat, lon)
+        
+        self.odometer += travelled
+        
+        dist = haversine_distance(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
+        if dist > 0.1:
+            self.heading = calculate_bearing(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
+        else:
+            self.heading = 0.0
+
+        self.last_coord = curr_coord
+        self.latitude = float(round(curr_coord[0], 6))
+        self.longitude = float(round(curr_coord[1], 6))
+        self.satellites = 0 if speed < 0 else random.randint(9, 15)
+        self.fix = "A"
+
+class IOSystem:
+    """Manages digital input signals and analog channel values."""
+    def __init__(self):
+        self.ignition = 0
+        self.box = 0
+        self.gpi = 0
+        self.analog = [12100, 4800, 0]
+
+    def update(self, motion_state, fuel_pct):
+        self.ignition = 1 if motion_state in (VehicleStateEnum.IDLE, VehicleStateEnum.DRIVING, VehicleStateEnum.STOPPED_IN_TRAFFIC) else 0
+        self.box = 0
+        self.gpi = 0
+        # fuel percentage mapped to analog[2] scaled by 100 (percentage 0-100)
+        self.analog = [12100, 4800, int(fuel_pct * 100)]
+
+class EventGenerator:
+    """Evaluates ignition changes and power transitions into event codes."""
+    def __init__(self):
+        self.last_ign = 0
+        self.ign_transition_pending = False
+
+    def determine_txn(self, current_ign, power_sys, speed):
+        if self.last_ign != current_ign:
+            self.ign_transition_pending = True
+        self.last_ign = current_ign
+
+        if power_sys.power_transition_pending:
+            power_sys.power_transition_pending = False
+            return "L"
+        elif self.ign_transition_pending:
+            self.ign_transition_pending = False
+            return "J"
+        else:
+            return "A" if speed > 0 else "E"
+
+class TelemetryBuilder:
+    """Assembles all subsystem states into a Telemetry Spec v2 payload."""
+    @staticmethod
+    def build_packet(uid, msg_id, txn, speed, gps: GPSSystem, io: IOSystem, pwr: PowerSystem, 
+                     fuel: FuelSystem, engine: EngineSystem, trans: TransmissionSystem, rpm: RPMSystem, 
+                     runtime: RuntimeTracker, alt_base):
+        altitude = alt_base + random.uniform(-2.5, 2.5)
+        
+        packet = {
+            "uid": uid,
+            "info": {
+                "dt": int(time.time()),
+                "txn": txn,
+                "msgkey": 0,
+                "msgid": msg_id,
+                "cmdkey": "",
+                "cmdval": ""
+            },
+            "gps": {
+                "fix": gps.fix,
+                "loc": [gps.latitude, gps.longitude],
+                "speed": float(round(speed, 2)),
+                "sat": gps.satellites,
+                "alt": float(round(altitude, 1)),
+                "dir": gps.heading,
+                "odo": float(round(gps.odometer, 1))
+            },
+            "io": {
+                "box": io.box,
+                "ign": io.ignition,
+                "gpi": io.gpi,
+                "status": 0,
+                "analog": io.analog
+            },
+            "pwr": {
+                "main": 1 if pwr.main_power_ok else 0,
+                "batt": 1,
+                "volt": float(round(pwr.volt, 1)),
+                "mvolt": float(round(pwr.mvolt, 2))
+            },
+            "dbg": {
+                "status": [1, 0],
+                "ver": ["v1.0.2", "h1.1.0"],
+                "lib": "VTSSim-v1.0"
+            },
+            
+            # Telemetry Specification v2 subsystem nodes
+            "fuel": {
+                "capacity": float(round(fuel.capacity, 1)),
+                "level": float(round(fuel.current_fuel, 1)),
+                "percentage": float(round(fuel.fuel_pct, 1)),
+                "consumption": float(round(fuel.base_consumption, 1)),
+                "estimated_range": float(round(fuel.estimated_range, 1))
+            },
+            "power": {
+                "main_voltage": float(round(pwr.mvolt, 2)),
+                "backup_voltage": float(round(pwr.volt / 1000.0, 2)),
+                "charging": 1 if (pwr.main_power_ok and io.ignition == 1) else 0,
+                "battery_health": float(round(pwr.profile.battery_health, 2))
+            },
+            "engine": {
+                "coolant_temperature": float(round(engine.coolant_temperature, 1)),
+                "rpm": int(rpm.rpm),
+                "load": float(round(engine.load, 1)),
+                "engine_hours": float(round(runtime.engine_hours, 3)),
+                "driving_hours": float(round(runtime.driving_hours, 3)),
+                "idle_hours": float(round(runtime.idle_hours, 3)),
+                "trip_runtime": float(round(runtime.trip_runtime, 1))
+            },
+            "network": {
+                "gsm_signal": -75 if pwr.main_power_ok else -95,
+                "network_type": "4G",
+                "operator": "Vodafone"
+            }
+        }
+        return packet
+
 class VehicleState:
-    def __init__(self, device_uid, waypoints, send_interval, speed_multiplier, loop_route):
+    """
+    Virtual Digital Twin encapsulating all simulated hardware, vehicle,
+    and environmental subsystems. Keeps the physical model in sync and serializes
+    to a standard Telemetry Specification v2 payload on step().
+    """
+    def __init__(self, device_uid, waypoints, send_interval, speed_multiplier, loop_route, index=0, capacity=60.0):
         self.device_uid = device_uid
         self.vehicle_name = f"Simulated {device_uid}"
         self.vehicle_type = "Truck" if "DEMO" in device_uid else "Car"
@@ -291,14 +772,13 @@ class VehicleState:
         self.packets_sent = 0
         self.last_status = "READY"
         self.last_command = "None"
-        
+
         # Load snapped path coordinates from the backend router
         if len(waypoints) > 50:
             self.path = waypoints
             if LOG_LEVEL != "DASHBOARD":
                 print(f"[{self.device_uid}] Loaded high-density route file directly with {len(self.path)} coordinates.")
         else:
-            # Attempt to fetch snapped route from backend (indefinite retry during setup)
             if LOG_LEVEL != "DASHBOARD":
                 print(f"[{self.device_uid}] Requesting road snapping from server...")
             status, response = api_request("/routes/snap-path", "POST", {
@@ -329,168 +809,128 @@ class VehicleState:
         self.forward = random.choice([True, False])
         self.odometer = float(random.randint(150000, 500000))
         self.last_coord = self.path[0]
-        self.speed = 50.0  # km/h
-        self.stop_ticks = 0
-        self.latitude = 0.0
-        self.longitude = 0.0
+        
+        # Twin Subsystems Initializations
+        self.profile = VEHICLE_PROFILES[index % len(VEHICLE_PROFILES)]
+        self.power_sys = PowerSystem(self.profile)
+        self.motion_sys = VehicleMotion(self.profile, speed_multiplier, loop_route, self.path, self.distances, self.total_path_distance)
+        self.gps_sys = GPSSystem(self.last_coord, self.odometer)
+        self.io_sys = IOSystem()
+        self.fuel_sys = FuelSystem(self.profile, capacity_liters=capacity)
+        self.engine_sys = EngineSystem(self.profile)
+        self.trans_sys = TransmissionSystem()
+        self.rpm_sys = RPMSystem()
+        self.runtime_sys = RuntimeTracker()
+        self.event_gen = EventGenerator()
+
+        # Backward compatible variables matching caller references
+        self.speed = 0.0
+        self.latitude = self.last_coord[0]
+        self.longitude = self.last_coord[1]
         self.heading = 0.0
 
+    @property
+    def state(self):
+        return self.motion_sys.state
+
     def step(self):
-        """Advances state and returns a VTSPacket payload."""
         if self.completed:
             return None
-            
-        # 1. Handle command overrides
-        if self.stopped_by_immobilizer:
-            self.speed = 0.0
-            self.stop_ticks = 0
-        else:
-            # Simulate traffic light / stop scenario (5% probability of stopping)
-            if self.stop_ticks > 0:
-                self.stop_ticks -= 1
-                self.speed = 0.0
-            elif random.random() < 0.05:
-                # Stop for 2-3 intervals
-                self.stop_ticks = random.randint(2, 3)
-                self.speed = 0.0
-            else:
-                # Fluctuate speed between 35 km/h and 75 km/h
-                speed_change = random.uniform(-6, 6)
-                self.speed = max(35.0, min(75.0, self.speed + speed_change))
-            
-        # Move distance offset along the path crawler
-        travelled = 0.0
-        if self.speed > 0:
-            # Calculate distance travelled factoring in the speed multiplier
-            travelled = (self.speed * self.speed_multiplier * 1000.0 / 3600.0) * self.send_interval
-            if self.forward:
-                self.current_distance_offset += travelled
-                if self.current_distance_offset >= self.total_path_distance:
-                    if self.loop_route:
-                        self.current_distance_offset = self.total_path_distance - (self.current_distance_offset - self.total_path_distance)
-                        self.forward = False
-                    else:
-                        self.current_distance_offset = self.total_path_distance
-                        self.completed = True
-                        self.speed = 0.0
-            else:
-                self.current_distance_offset -= travelled
-                if self.current_distance_offset <= 0.0:
-                    if self.loop_route:
-                        self.current_distance_offset = abs(self.current_distance_offset)
-                        self.forward = True
-                    else:
-                        self.current_distance_offset = 0.0
-                        self.completed = True
-                        self.speed = 0.0
-                        
-        # Interpolate coordinates along the segment offset
-        idx = 0
-        while idx < len(self.distances) - 2 and self.distances[idx+1] < self.current_distance_offset:
-            idx += 1
-            
-        d1 = self.distances[idx]
-        d2 = self.distances[idx+1]
-        lat1, lon1 = self.path[idx]
-        lat2, lon2 = self.path[idx+1]
-        segment_dist = d2 - d1
-        if segment_dist > 0.001:
-            alpha = (self.current_distance_offset - d1) / segment_dist
-        else:
-            alpha = 0.0
-            
-        lat = lat1 + (lat2 - lat1) * alpha
-        lon = lon1 + (lon2 - lon1) * alpha
-        curr_coord = (lat, lon)
+
+        # Update Subsystems (Dependency update order)
+        self.motion_sys.update_state(self.power_sys.main_power_ok)
+        self.power_sys.update(self.motion_sys.state, self.io_sys.ignition)
+        self.motion_sys.update_speed(self.stopped_by_immobilizer)
         
-        # Odometer calculation
-        self.odometer += travelled
+        self.speed = self.motion_sys.speed
         
-        # Direction / Bearing calculation
-        dist = haversine_distance(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
-        if dist > 0.1:
-            direction = calculate_bearing(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
-        else:
-            direction = 0.0
-            
-        self.last_coord = curr_coord
-        self.latitude = float(round(curr_coord[0], 6))
-        self.longitude = float(round(curr_coord[1], 6))
-        self.heading = direction
+        # GPS and position mapping
+        self.gps_sys.update(self.speed, self.motion_sys, self.send_interval)
+        self.latitude = self.gps_sys.latitude
+        self.longitude = self.gps_sys.longitude
+        self.heading = self.gps_sys.heading
+        self.odometer = self.gps_sys.odometer
+        self.completed = self.motion_sys.completed
+
+        # IO, Engine, Gears, RPM, Fuel & Runtime updates
+        self.io_sys.update(self.motion_sys.state, self.fuel_sys.fuel_pct)
+        accel = self.speed - self.motion_sys.prev_speed
         
-        altitude = self.alt_base + random.uniform(-2.5, 2.5)
-        satellites = random.randint(9, 15)
-        ign = 1 if self.speed > 0 else 0
+        self.engine_sys.update(self.io_sys.ignition, self.motion_sys.state, self.speed, self.profile.max_speed, accel)
+        self.trans_sys.update(self.engine_sys.state, self.speed, self.engine_sys.load, accel)
+        self.rpm_sys.update(self.engine_sys.state, self.trans_sys.gear, self.speed, self.engine_sys.load, accel)
+        self.fuel_sys.update(self.motion_sys.state, self.speed, self.motion_sys.prev_speed, self.engine_sys.load, self.rpm_sys.rpm, self.send_interval)
+        self.runtime_sys.update(self.io_sys.ignition, self.motion_sys.state, self.send_interval)
         
-        # Construct VTS telemetry schema packet
-        packet = {
-            "uid": self.device_uid,
-            "info": {
-                "dt": int(time.time()),
-                "txn": "E" if self.speed > 0 else "A",
-                "msgkey": 0,
-                "msgid": self.msg_id,
-                "cmdkey": "",
-                "cmdval": ""
-            },
-            "gps": {
-                "fix": "A",
-                "loc": [float(round(curr_coord[0], 6)), float(round(curr_coord[1], 6))],
-                "speed": float(round(self.speed, 2)),
-                "sat": satellites,
-                "alt": float(round(altitude, 1)),
-                "dir": direction,
-                "odo": float(round(self.odometer, 1))
-            },
-            "io": {
-                "box": 0,
-                "ign": ign,
-                "gpi": 0,
-                "status": 0,
-                "analog": [12100, 4800]
-            },
-            "pwr": {
-                "main": 1,
-                "batt": 1,
-                "volt": 4180.0,
-                "mvolt": 13.8
-            },
-            "dbg": {
-                "status": [1, 0],
-                "ver": ["v1.0.2", "h1.1.0"],
-                "lib": "VTSSim-v1.0"
-            }
-        }
-        
+        txn = self.event_gen.determine_txn(self.io_sys.ignition, self.power_sys, self.speed)
+
+        # Assemble packet
+        packet = TelemetryBuilder.build_packet(
+            uid=self.device_uid,
+            msg_id=self.msg_id,
+            txn=txn,
+            speed=self.speed,
+            gps=self.gps_sys,
+            io=self.io_sys,
+            pwr=self.power_sys,
+            fuel=self.fuel_sys,
+            engine=self.engine_sys,
+            trans=self.trans_sys,
+            rpm=self.rpm_sys,
+            runtime=self.runtime_sys,
+            alt_base=self.alt_base
+        )
         return packet
 
 # --- COMMAND EXECUTION AND ACK ---
-def acknowledge_command(vehicle, cmd_name):
-    """Finds command record in SENT status on backend and marks it EXECUTED."""
+def acknowledge_command(vehicle, cmd_name, response_text="Success"):
+    """Finds command record in Delivered status on backend, acknowledges it, waits, and marks Completed."""
     if not vehicle.db_id:
         return False
         
-    status_code, response = api_request(f"/commands?vehicle_id={vehicle.db_id}&status=SENT", "GET", max_retries=2)
+    status_code, response = api_request(f"/commands?vehicle_id={vehicle.db_id}&status=Delivered", "GET", max_retries=2)
     if status_code == 200 and isinstance(response, list):
         matched_cmd = None
         for c in response:
-            if c.get("command_name") == cmd_name:
+            t = c.get("command_type") or ""
+            mapped = False
+            if cmd_name == "STOPV" and "immobilize" in t.lower():
+                mapped = True
+            elif cmd_name == "STARTV" and "restore" in t.lower():
+                mapped = True
+            elif cmd_name == "PRD" and "interval" in t.lower():
+                mapped = True
+            elif cmd_name in ("REBOOT", "RESET") and "restart" in t.lower():
+                mapped = True
+            elif cmd_name == t.upper():
+                mapped = True
+                
+            if mapped:
                 matched_cmd = c
                 break
                 
         if matched_cmd:
             cmd_id = matched_cmd.get("id")
-            exec_status_code, _ = api_request(
-                f"/commands/{cmd_id}/execute?message=Simulated execution on simulator hardware successful",
-                "PUT",
+            
+            # 1. Transition to Acknowledged
+            api_request(f"/commands/{cmd_id}/acknowledge", "PATCH", max_retries=2)
+            
+            # 2. Wait 2 seconds to simulate processing delay
+            time.sleep(2)
+            
+            # 3. Transition to Completed
+            comp_status, _ = api_request(
+                f"/commands/{cmd_id}/complete?response={urllib.parse.quote(response_text)}",
+                "PATCH",
                 max_retries=2
             )
-            return exec_status_code == 200
+            return comp_status == 200
+            
     return False
 
 # --- FLEET REGISTRATION ---
 def register_fleet(device_uids):
-    """Fetches registrations from VTS backend and registers missing devices, returning UID-to-ID mapping."""
+    """Fetches registrations from VTS backend and registers missing devices, returning UID-to-ID and UID-to-Capacity mappings."""
     if LOG_LEVEL != "DASHBOARD":
         print("[INFO] Checking vehicle registration on backend...")
     
@@ -498,11 +938,13 @@ def register_fleet(device_uids):
     status_code, response = api_request("/vehicles", "GET", max_retries=None)
     
     uid_to_id = {}
+    uid_to_capacity = {}
     existing_uids = set()
     if status_code == 200 and isinstance(response, list):
         for v in response:
             existing_uids.add(v.get("device_uid"))
             uid_to_id[v.get("device_uid")] = v.get("id")
+            uid_to_capacity[v.get("device_uid")] = v.get("capacity")
             
     for uid in device_uids:
         if uid not in existing_uids:
@@ -516,6 +958,7 @@ def register_fleet(device_uids):
             status_reg, response_reg = api_request("/vehicles", "POST", reg_payload, max_retries=3)
             if status_reg == 201:
                 uid_to_id[uid] = response_reg.get("id")
+                uid_to_capacity[uid] = response_reg.get("capacity")
                 if LOG_LEVEL != "DASHBOARD":
                     print(f"[OK] Registered vehicle {uid} successfully.")
             else:
@@ -525,7 +968,7 @@ def register_fleet(device_uids):
             if LOG_LEVEL != "DASHBOARD":
                 print(f"[EXISTS] Vehicle {uid} is already registered (DB ID: {uid_to_id[uid]}).")
                 
-    return uid_to_id
+    return uid_to_id, uid_to_capacity
 
 # --- GRAPHIC STATUS DISPLAY (DASHBOARD) ---
 def render_dashboard(vehicles):
@@ -603,7 +1046,7 @@ def main():
         print("=" * 60)
 
     # 2. Register fleet and obtain DB mapping ID
-    uid_to_id = register_fleet(device_uids)
+    uid_to_id, uid_to_capacity = register_fleet(device_uids)
     
     # 3. Resolve route files and waypoints
     local_files = find_local_route_files()
@@ -628,7 +1071,8 @@ def main():
                 print(f"[{uid}] Mapping to fallback route template {i % len(TEMPLATE_ROUTES) + 1}.")
                 
         # Initialize vehicle state
-        v_state = VehicleState(uid, waypoints, send_interval, SPEED_MULTIPLIER, LOOP_ROUTE)
+        capacity = uid_to_capacity.get(uid)
+        v_state = VehicleState(uid, waypoints, send_interval, SPEED_MULTIPLIER, LOOP_ROUTE, index=i, capacity=capacity)
         v_state.db_id = uid_to_id.get(uid)
         simulated_vehicles.append(v_state)
 
@@ -678,26 +1122,29 @@ def main():
                 cmd_val = parts[1] if len(parts) > 1 else None
                 
                 # Execute simulated action
+                response_text = "Success"
                 if cmd_name == "STOPV":
                     vehicle.stopped_by_immobilizer = True
                     vehicle.speed = 0.0
+                    response_text = "Vehicle relay disabled (Immobilized)"
                 elif cmd_name == "STARTV":
                     vehicle.stopped_by_immobilizer = False
+                    response_text = "Vehicle relay enabled (Restored)"
                 elif cmd_name == "PRD" and cmd_val:
                     try:
                         vehicle.send_interval = float(cmd_val)
+                        response_text = f"Interval changed to {cmd_val}s"
                     except ValueError:
                         pass
-                elif cmd_name == "REBOOT":
-                    vehicle.msg_id = 1
-                elif cmd_name == "RESET":
+                elif cmd_name in ("REBOOT", "RESET"):
                     vehicle.msg_id = 1
                     vehicle.stopped_by_immobilizer = False
+                    response_text = "Device reboot sequence initiated"
                     
                 # Acknowledge execution back to database
-                ack_success = acknowledge_command(vehicle, cmd_name)
+                ack_success = acknowledge_command(vehicle, cmd_name, response_text)
                 if LOG_LEVEL != "DASHBOARD" and ack_success:
-                    print(f"[{vehicle.device_uid}] Command {cmd_name} marked EXECUTED on backend.")
+                    print(f"[{vehicle.device_uid}] Command {cmd_name} execution completed on backend.")
                     
         # Update dashboard view if dashboard mode is enabled
         if LOG_LEVEL == "DASHBOARD":
@@ -747,7 +1194,7 @@ def get_config():
 
     # Resolve variables
     api_url = resolve(args.API_URL, "API_URL", "https://welogical-vehicle-tracking-system.onrender.com").rstrip("/")
-    device_uid_str = resolve(args.DEVICE_UID, "DEVICE_UID", "ESP32-DEMO-007")
+    device_uid_str = resolve(args.DEVICE_UID, "DEVICE_UIDS", resolve(None, "DEVICE_UID", "ESP32-DEMO-007"))
     device_uids = [u.strip() for u in device_uid_str.split(",") if u.strip()]
     
     interval_str = resolve(args.SEND_INTERVAL, "SEND_INTERVAL", 10.0)

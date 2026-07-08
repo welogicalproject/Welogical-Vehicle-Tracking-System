@@ -176,8 +176,8 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
   return (
     <div className="space-y-4 text-left">
       {/* Map Layers Toggles */}
-      <div className="flex items-center justify-between bg-slate-900/60 border border-[#1e294b]/60 rounded-xl p-3 shrink-0">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between bg-slate-900/60 border border-[#1e294b]/60 rounded-xl p-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Map Layers</span>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
@@ -251,7 +251,7 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
             snapshots={snapshots}
             selectedVehicleId={trip.vehicle_id}
             visibleVehicleIds={[trip.vehicle_id]}
-            heightClass="h-[400px]"
+            heightClass="h-[250px] sm:h-[400px]"
             isMiniMap={true}
             googleRoutePolyline={googleRoute?.encoded_polyline}
             showGoogleRoute={showGoogleRoute && googleRoute?.status === "success"}

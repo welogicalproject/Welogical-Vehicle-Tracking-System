@@ -82,7 +82,7 @@ export default function EventsPage() {
   });
 
   return (
-    <div className="p-8 space-y-8 select-none">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-8 select-none">
       {/* Top Filter and Action Bar */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-[#131a2d]/40 border border-[#1e294b]/60 rounded-xl px-4 py-3">
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -136,7 +136,7 @@ export default function EventsPage() {
         <button
           onClick={() => loadData(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all"
+          className="w-full xl:w-auto flex items-center justify-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", refreshing ? "animate-spin" : "")} />
           Refresh Feed

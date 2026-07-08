@@ -62,3 +62,30 @@ docker run -d -p 8000:8000 \
   -e DATABASE_URL="postgresql://user:password@host:5432/db" \
   vts-backend:latest
 ```
+
+---
+
+## 4. Telemetry Simulator Cloud Integration
+
+The backend features an integrated telemetry simulator under `scripts/simulator/` designed to mimic real-time GPS telemetry from virtual tracking devices (like an ESP32).
+
+### 4.1 Enabling the Simulator
+To enable the simulator to run automatically as a supervised background process within the backend container, set:
+```env
+SIMULATOR_ENABLED=true
+```
+
+### 4.2 Configuration Parameters
+You can customize the simulation behavior by injecting the following environment variables:
+
+| Environment Variable | Description | Example / Default |
+|----------------------|-------------|-------------------|
+| `API_URL` | Destination backend base URL. If omitted, defaults to `https://welogical-vehicle-tracking-system.onrender.com` in production and `http://127.0.0.1:8000` in development. | `https://welogical-vehicle-tracking-system.onrender.com` |
+| `DEVICE_UIDS` | Comma-separated list of device UIDs to simulate. | `ESP32-DEMO-007,ESP32-DEMO-008,ESP32-DEMO-009` |
+| `SEND_INTERVAL` | Ingestion transmit frequency (in seconds). | `10.0` |
+| `ROUTE_DIRECTORY` | Folder path containing custom JSON/CSV/GPX routes. | `scripts/simulator/routes` |
+| `LOG_LEVEL` | Log output style: `INFO` (clean logs, recommended for cloud), `DEBUG`, `WARN`, `ERROR`. | `INFO` |
+
+### 4.3 Process Supervision
+- **Auto-Restart:** The simulator is monitored by an asynchronous background process supervisor. If the simulator process terminates unexpectedly, the supervisor logs the exit code, waits 5 seconds, and restarts the simulator automatically.
+- **Graceful Shutdown:** When the FastAPI server receives a shutdown signal (e.g. during a new deployment or container restart), it sends a clean `SIGTERM` to the simulator process.

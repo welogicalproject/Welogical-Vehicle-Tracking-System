@@ -46,7 +46,7 @@ export default function TrackingPage() {
   const [plannedRoute, setPlannedRoute] = useState<any>(null);
 
   return (
-    <div className="p-6 space-y-6 select-none bg-[#0b0f19] min-h-full">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 select-none bg-[#0b0f19] min-h-full">
       <TrackingToolbar
         snapshots={snapshots}
         vehicleOptions={vehicleOptions}

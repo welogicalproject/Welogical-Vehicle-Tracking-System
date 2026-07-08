@@ -37,7 +37,7 @@ export default function TripsPage() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-[1600px] mx-auto select-none">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-w-[1600px] mx-auto select-none">
       {/* Header and Rebuild Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="text-left">

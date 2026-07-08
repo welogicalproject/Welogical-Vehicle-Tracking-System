@@ -100,6 +100,8 @@ export function getGPSFixText(snapshot: VehicleTrackingSnapshot | undefined) {
 }
 
 export function getBatteryVolt(snapshot: VehicleTrackingSnapshot | undefined) {
+  const newBackup = snapshot?.latest_location?.extra_data?.power?.backup_voltage;
+  if (typeof newBackup === "number") return `${newBackup.toFixed(2)} V`;
   const volt = getPacketVal(snapshot, ["pwr", "volt"]);
   if (typeof volt === "number") return `${(volt / 1000).toFixed(1)} V`;
   const analog = getPacketVal(snapshot, ["io", "analog", 0]);
@@ -108,8 +110,36 @@ export function getBatteryVolt(snapshot: VehicleTrackingSnapshot | undefined) {
 }
 
 export function getMainVolt(snapshot: VehicleTrackingSnapshot | undefined) {
+  const newMain = snapshot?.latest_location?.extra_data?.power?.main_voltage;
+  if (typeof newMain === "number") return `${newMain.toFixed(2)} V`;
   const mvolt = getPacketVal(snapshot, ["pwr", "mvolt"]);
   return typeof mvolt === "number" ? `${mvolt.toFixed(1)} V` : "N/A";
+}
+
+export function getFuelLevel(snapshot: VehicleTrackingSnapshot | undefined) {
+  const newFuel = snapshot?.latest_location?.extra_data?.fuel;
+  if (newFuel && typeof newFuel.percentage === "number") {
+    const pct = newFuel.percentage;
+    const capacity = newFuel.capacity ?? snapshot?.vehicle?.capacity;
+    if (typeof capacity === "number" && capacity > 0) {
+      const level = newFuel.level ?? ((pct / 100) * capacity);
+      return `${level.toFixed(1)}L / ${capacity.toFixed(0)}L (${pct.toFixed(1)}%)`;
+    }
+    return `${pct.toFixed(1)}%`;
+  }
+  
+  const oldAnalogFuel = getPacketVal(snapshot, ["io", "analog", 2]);
+  if (typeof oldAnalogFuel === "number") {
+    const pct = oldAnalogFuel / 100;
+    const capacity = snapshot?.vehicle?.capacity;
+    if (typeof capacity === "number" && capacity > 0) {
+      const level = (pct / 100) * capacity;
+      return `${level.toFixed(1)}L / ${capacity.toFixed(0)}L (${pct.toFixed(1)}%)`;
+    }
+    return `${pct.toFixed(1)}%`;
+  }
+  
+  return "N/A";
 }
 
 export function getOdometerKm(snapshot: VehicleTrackingSnapshot | undefined) {

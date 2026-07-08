@@ -10,6 +10,13 @@ from app.models.trip import Trip
 from app.models.route_cache import RouteCache, TripRouteCacheLink, GoogleRouteUsageEvent
 from app.models.driver import Driver
 from app.models.driver_assignment import DriverAssignment
+from app.models.analytics_checkpoint import AnalyticsCheckpoint
+from app.models.vehicle_daily_summary import VehicleDailySummary
+from app.models.fleet_daily_summary import FleetDailySummary
+from app.models.driver_daily_summary import DriverDailySummary
+from app.models.maintenance_summary import MaintenanceSummary
+from app.models.fleet_operations import VehicleOperations, FleetOperationsLive
+from app.models.notification_history import NotificationHistory
 
 __all__ = [
     "Base",
@@ -26,4 +33,12 @@ __all__ = [
     "GoogleRouteUsageEvent",
     "Driver",
     "DriverAssignment",
+    "AnalyticsCheckpoint",
+    "VehicleDailySummary",
+    "FleetDailySummary",
+    "DriverDailySummary",
+    "MaintenanceSummary",
+    "VehicleOperations",
+    "FleetOperationsLive",
+    "NotificationHistory",
 ]

@@ -110,7 +110,7 @@ export default function ExplorerPage() {
   };
 
   return (
-    <div className="p-8 space-y-8 select-none">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-8 select-none">
       {/* Action Header bar */}
       <ExplorerToolbar
         activeTab={activeTab}

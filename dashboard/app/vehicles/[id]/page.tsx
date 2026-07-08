@@ -123,7 +123,7 @@ export default function VehicleDetailsPage({ params }: PageProps) {
   }, [searchParams, setPlaybackActive]);
 
   return (
-    <div className="space-y-6 p-6 lg:p-8 select-none">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 lg:p-8 select-none">
       {/* View Title */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-[#1e294b]/60 pb-5">
         <div className="flex items-center gap-4">

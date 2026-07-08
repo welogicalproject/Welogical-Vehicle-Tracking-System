@@ -11,17 +11,17 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "008_reconcile_analytics_and_operations"
-down_revision: Union[str, None] = "007_add_route_cache_tables"
+revision = "008_reconcile"
+down_revision = "007_add_route_cache_tables"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # 1. Alter device_commands table (PostgreSQL safe: rename columns and cast enums)
-    op.rename_column("device_commands", "command_name", "command_type")
-    op.rename_column("device_commands", "command_value", "payload")
-    op.rename_column("device_commands", "executed_at", "completed_at")
+    op.alter_column("device_commands", "command_name", new_column_name="command_type")
+    op.alter_column("device_commands", "command_value", new_column_name="payload")
+    op.alter_column("device_commands", "executed_at", new_column_name="completed_at")
 
     # Add new columns
     op.add_column("device_commands", sa.Column("acknowledged_at", sa.DateTime(), nullable=True))
@@ -243,6 +243,6 @@ def downgrade() -> None:
     op.drop_column("device_commands", "acknowledged_at")
 
     # Rename columns back
-    op.rename_column("device_commands", "completed_at", "executed_at")
-    op.rename_column("device_commands", "payload", "command_value")
-    op.rename_column("device_commands", "command_type", "command_name")
+    op.alter_column("device_commands", "completed_at", new_column_name="executed_at")
+    op.alter_column("device_commands", "payload", new_column_name="command_value")
+    op.alter_column("device_commands", "command_type", new_column_name="command_name")

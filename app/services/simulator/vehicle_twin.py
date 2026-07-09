@@ -134,14 +134,31 @@ class VehicleTwin:
                     min_dist = d
                     closest_idx = i
             
-            # Use distance offset of closest point
+            # Audit deviation limits
+            if min_dist > 100.0:
+                logger.warning(
+                    f"[Persistence] Snap distance ({min_dist:.1f}m) exceeds 100m limit for twin {device_uid}. "
+                    f"Previous waypoint: ({last_latitude:.6f}, {last_longitude:.6f}), "
+                    f"Restored waypoint: ({self.path[closest_idx][0]:.6f}, {self.path[closest_idx][1]:.6f}). "
+                    f"Reason for fallback: To prevent route teleportation, snapping to closest valid waypoint but forcing starting coordinates to last known coordinates."
+                )
+                # Force starting coordinate exactly to previous position to maintain complete continuity
+                start_pt = (last_latitude, last_longitude)
+            else:
+                logger.info(
+                    f"[Persistence] Snapped twin {device_uid} successfully. "
+                    f"Previous waypoint: ({last_latitude:.6f}, {last_longitude:.6f}), "
+                    f"Restored waypoint: ({self.path[closest_idx][0]:.6f}, {self.path[closest_idx][1]:.6f}). "
+                    f"Distance between previous and restored position: {min_dist:.1f}m"
+                )
+                start_pt = self.path[closest_idx]
+
             start_offset = self.distances[closest_idx]
-            logger.info(f"[Persistence] Snapped twin {device_uid} to waypoint index {closest_idx}/{len(self.path)-1} "
-                        f"at offset {start_offset:.1f}m (deviation: {min_dist:.1f}m) to preserve route history")
         else:
             # First boot fallback: random cruising offset
             start_offset = random.uniform(0.0, self.total_path_distance)
             forward_dir = random.choice([True, False])
+            start_pt = self.path[0]
 
         # Twin Subsystems Initializations
         self.profile = VEHICLE_PROFILES[index % len(VEHICLE_PROFILES)]
@@ -154,7 +171,6 @@ class VehicleTwin:
         self.motion_sys.forward = forward_dir
         self.motion_sys.speed = last_speed
 
-        start_pt = self.path[0] if (last_latitude is None or last_longitude is None) else (last_latitude, last_longitude)
         self.gps_sys = GPSSystem(start_pt, last_odometer)
         self.io_sys = IOSystem()
         self.io_sys.ignition = last_ign

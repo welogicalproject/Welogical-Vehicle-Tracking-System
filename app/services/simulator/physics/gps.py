@@ -56,6 +56,22 @@ class GPSSystem:
         # Log route progress metrics
         import logging
         gps_logger = logging.getLogger("vts.simulator.gps")
+        zero_reason = ""
+        if speed == 0.0:
+            if motion.completed:
+                zero_reason = "destination reached"
+            elif motion.state in ("Parked", "Idle", "Stopped in Traffic", "Power Failure", "Recovering"):
+                zero_reason = f"motion state: {motion.state}"
+            else:
+                zero_reason = "unknown (cruising transition)"
+        
+        gps_logger.info(
+            f"Current waypoint index={idx}/{len(motion.waypoints)-1} | "
+            f"Current target speed={motion._target_speed:.1f} | "
+            f"Current actual speed={speed:.1f} | "
+            f"Packet speed={speed:.1f}"
+            + (f" | Reason for zero speed: {zero_reason}" if zero_reason else "")
+        )
         gps_logger.info(
             f"Simulator: Waypoint index={idx}/{len(motion.waypoints)-1} | "
             f"Offset={motion.current_distance_offset:.1f}/{motion.total_path_distance:.1f}m | "

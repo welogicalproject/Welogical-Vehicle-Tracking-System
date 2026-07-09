@@ -164,10 +164,10 @@ export default function AnalyticsPage() {
     let failed = 0;
 
     commands.forEach((c) => {
-      if (c.status === "PENDING") pending++;
-      else if (c.status === "SENT") sent++;
-      else if (c.status === "EXECUTED") executed++;
-      else if (c.status === "FAILED") failed++;
+      if (c.status === "Queued" || c.status === "PENDING") pending++;
+      else if (c.status === "Sending" || c.status === "Delivered" || c.status === "Acknowledged" || c.status === "Executing" || c.status === "SENT") sent++;
+      else if (c.status === "Completed" || c.status === "EXECUTED") executed++;
+      else if (c.status === "Failed" || c.status === "Timed Out" || c.status === "Cancelled" || c.status === "FAILED") failed++;
     });
 
     return [

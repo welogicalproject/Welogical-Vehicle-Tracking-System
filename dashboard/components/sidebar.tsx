@@ -264,6 +264,4 @@ export function Sidebar() {
     </>
   );
 }
-  );
-}
 

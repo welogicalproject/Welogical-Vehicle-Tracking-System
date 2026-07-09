@@ -62,14 +62,17 @@ export function SeverityBadge({ severity }: { severity: Event["severity"] }) {
 }
 
 export function CommandBadge({ status }: { status: DeviceCommand["status"] }) {
-  const cls =
-    status === "FAILED"
-      ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
-      : status === "EXECUTED"
-      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-      : status === "SENT"
-      ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-400"
-      : "border-amber-500/20 bg-amber-500/10 text-amber-400";
+  const isFailed = ["Failed", "Timed Out", "Cancelled", "FAILED"].includes(status);
+  const isCompleted = ["Completed", "EXECUTED"].includes(status);
+  const isActive = ["Sending", "Delivered", "Acknowledged", "Executing", "SENT"].includes(status);
+
+  const cls = isFailed
+    ? "border-rose-500/20 bg-rose-500/10 text-rose-400"
+    : isCompleted
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+    : isActive
+    ? "border-cyan-500/20 bg-cyan-500/10 text-cyan-400"
+    : "border-amber-500/20 bg-amber-500/10 text-amber-400";
   return (
     <span className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase border ${cls}`}>
       {status}

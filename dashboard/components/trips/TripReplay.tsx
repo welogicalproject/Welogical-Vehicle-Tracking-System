@@ -121,7 +121,7 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
       altitude: 0,
       timestamp: currentPoint.timestamp,
       extra_data: {
-        gps_details: {
+        gps: {
           dir: currentPoint.heading,
         },
         io: {

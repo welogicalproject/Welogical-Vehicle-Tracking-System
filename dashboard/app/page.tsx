@@ -117,8 +117,8 @@ export default function OverviewPage() {
         }
 
         // GPS Lost check
-        const gpsFix = snapshot?.latest_location?.gps_details?.fix ?? extra?.gps?.fix;
-        const satCount = snapshot?.latest_location?.gps_details?.sat ?? extra?.gps?.satellites;
+        const gpsFix = extra?.gps?.fix ?? extra?.gps_details?.fix;
+        const satCount = extra?.gps?.satellites ?? extra?.gps?.sat ?? extra?.gps_details?.sat;
         if (gpsFix === "V" || satCount === 0) {
           gpsLost++;
         }
@@ -201,8 +201,8 @@ export default function OverviewPage() {
       }
 
       // Information GPS Lost (Priority 1)
-      const gpsFix = s.latest_location?.gps_details?.fix ?? extra?.gps?.fix;
-      const satCount = s.latest_location?.gps_details?.sat ?? extra?.gps?.satellites;
+      const gpsFix = extra?.gps?.fix ?? extra?.gps_details?.fix;
+      const satCount = extra?.gps?.satellites ?? extra?.gps?.sat ?? extra?.gps_details?.sat;
       if (gpsFix === "V" || satCount === 0) {
         list.push({
           id: s.vehicle.id,
@@ -494,7 +494,7 @@ export default function OverviewPage() {
           <CardContent className="p-4 max-h-[35rem] overflow-y-auto">
             <div className="relative border-l border-slate-800 ml-2.5 pl-5 space-y-5">
               {recentEvents.map((ev, idx) => {
-                const date = new Date(ev.timestamp);
+                const date = new Date(ev.created_at);
                 const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                 
                 // Color mapping per severity

@@ -15,6 +15,15 @@ class Settings(BaseSettings):
 
     # Telemetry Simulator settings
     SIMULATOR_ENABLED: bool = False
+    SIMULATOR_MODE: str = "cloud"
+    SIMULATOR_DEVICE_UIDS: str = "ESP32-DEMO-001,ESP32-DEMO-002,ESP32-DEMO-003"
+    SIMULATOR_SEND_INTERVAL: float = 10.0
+    SIMULATOR_SPEED_MULTIPLIER: float = 1.0
+    SIMULATOR_LOOP_ROUTE: bool = True
+    # Auto-register vehicle DB records on startup when missing
+    SIMULATOR_AUTO_REGISTER: bool = True
+    # Seconds between health watchdog checks (restarts crashed twins)
+    SIMULATOR_HEALTH_CHECK_INTERVAL: int = 30
 
     # Database settings
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vts_db"

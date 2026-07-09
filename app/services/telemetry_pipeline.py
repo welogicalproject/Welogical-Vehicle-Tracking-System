@@ -8,7 +8,6 @@ from app.models.raw_packet import RawPacket
 from app.models.vehicle import Vehicle
 from app.models.device_command import DeviceCommand
 from app.models.command_log import CommandLog
-from app.models.enums import CommandStatus
 from app.schemas.vts import VTSPacket
 from app.services.packet_validator import validate_telemetry_packet
 from app.services.structured_logger import log_telemetry_stage
@@ -100,7 +99,7 @@ async def run_synchronous_telemetry_pipeline(
                 command_id=pending_cmd.id,
                 vehicle_id=vehicle.id,
                 status="Delivered",
-                message="Delivered to device in HTTP telemetry response payload"
+                message="Delivered to device via telemetry response payload"
             )
             db.add(cmd_log)
             
@@ -121,6 +120,7 @@ async def run_synchronous_telemetry_pipeline(
         response_payload = {"result": True, "msg": "Data Success"}
         if cmd_payload:
             response_payload["cmd"] = cmd_payload
+            response_payload["cmd_id"] = pending_cmd.id
 
         # Calculate packet latency in seconds
         now_epoch = datetime.now(timezone.utc).timestamp()

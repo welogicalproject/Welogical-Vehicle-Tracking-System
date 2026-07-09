@@ -12,6 +12,7 @@ from app.routers.operations import router as operations_router
 from app.routers.reports import router as reports_router
 from app.routers.notifications import router as notifications_router
 from app.routers.websocket import router as websocket_router
+from app.routers.simulator import router as simulator_router
 
 __all__ = [
     "health_router",
@@ -29,4 +30,5 @@ __all__ = [
     "reports_router",
     "notifications_router",
     "websocket_router",
+    "simulator_router",
 ]

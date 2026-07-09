@@ -19,8 +19,11 @@ class GPSSystem:
                 motion.current_distance_offset += travelled
                 if motion.current_distance_offset >= motion.total_path_distance:
                     if motion.loop_route:
-                        motion.current_distance_offset = motion.total_path_distance - (motion.current_distance_offset - motion.total_path_distance)
-                        motion.forward = False
+                        motion.current_distance_offset = 0.0  # Reset offset to start of route
+                        motion.forward = True
+                        motion.completed = False
+                        import logging
+                        logging.getLogger("vts.simulator.gps").info("Simulator: Route completed. Loop route enabled. Route restarted.")
                     else:
                         motion.current_distance_offset = motion.total_path_distance
                         motion.completed = True
@@ -29,8 +32,11 @@ class GPSSystem:
                 motion.current_distance_offset -= travelled
                 if motion.current_distance_offset <= 0.0:
                     if motion.loop_route:
-                        motion.current_distance_offset = abs(motion.current_distance_offset)
-                        motion.forward = True
+                        motion.current_distance_offset = motion.total_path_distance  # Start from end in reverse
+                        motion.forward = False
+                        motion.completed = False
+                        import logging
+                        logging.getLogger("vts.simulator.gps").info("Simulator: Route completed. Loop route enabled. Route restarted.")
                     else:
                         motion.current_distance_offset = 0.0
                         motion.completed = True
@@ -65,6 +71,15 @@ class GPSSystem:
             else:
                 zero_reason = "unknown (cruising transition)"
         
+        gps_logger.info(
+            f"Current waypoint={idx} | "
+            f"Last waypoint={len(motion.waypoints)-1} | "
+            f"Route completed={motion.completed} | "
+            f"Loop route enabled={motion.loop_route} | "
+            f"Current speed={speed:.1f} | "
+            f"Reason for speed=0={zero_reason if zero_reason else 'None'} | "
+            f"Current simulator state={motion.state}"
+        )
         gps_logger.info(
             f"Current waypoint index={idx}/{len(motion.waypoints)-1} | "
             f"Current target speed={motion._target_speed:.1f} | "

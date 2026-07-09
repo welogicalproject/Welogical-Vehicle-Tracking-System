@@ -266,6 +266,7 @@ class SimulatorService:
             # Check if road snapping is enabled
             if settings.GOOGLE_ROUTES_ENABLED and settings.GOOGLE_ROUTES_API_KEY:
                 try:
+                    logger.info("Simulator: Loading Google route...")
                     from app.services.google_routes import call_google_routes_api
                     from app.routers.route import decode_polyline
                     logger.info(f"[RouteCache] Calling internal Google Routes API to snap route {idx}")
@@ -282,12 +283,18 @@ class SimulatorService:
                     if result.get("status") == "SUCCESS" and result.get("encoded_polyline"):
                         raw_coords = decode_polyline(result["encoded_polyline"])
                         path = [(c[0], c[1]) for c in raw_coords]
-                        logger.info(f"[RouteCache] Successfully snapped route {idx} ({len(path)} points)")
+                        logger.info("Simulator: Google route loaded successfully.")
+                        logger.info(f"Simulator: Snapped waypoints = {len(path)}")
                 except Exception as api_err:
-                    logger.error(f"[RouteCache] Failed to snap route {idx} via Google API: {api_err}. Falling back to straight-line interpolation.")
+                    logger.error(f"[RouteCache] Failed to snap route {idx} via Google API: {api_err}")
+                    logger.info("Simulator: Google route failed. Falling back to template route.")
 
             # Fallback to straight-line interpolation if API snapping is disabled or failed
             if not path:
+                if settings.GOOGLE_ROUTES_ENABLED:
+                    logger.info("Simulator: Google route failed. Falling back to template route.")
+                else:
+                    logger.info("Simulator: Google route snapping is disabled. Using template route.")
                 path = interpolate_waypoints(waypoints, points_per_segment=50)
 
             paths[idx] = path

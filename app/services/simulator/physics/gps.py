@@ -23,7 +23,11 @@ class GPSSystem:
                         motion.forward = True
                         motion.completed = False
                         import logging
-                        logging.getLogger("vts.simulator.gps").info("Simulator: Route completed. Loop route enabled. Route restarted.")
+                        logger = logging.getLogger("vts.simulator.gps")
+                        logger.info("Route completed.")
+                        logger.info("Looping route.")
+                        logger.info("Restarting from waypoint 0.")
+                        logger.info("Motion state remains Driving.")
                     else:
                         motion.current_distance_offset = motion.total_path_distance
                         motion.completed = True
@@ -36,7 +40,11 @@ class GPSSystem:
                         motion.forward = False
                         motion.completed = False
                         import logging
-                        logging.getLogger("vts.simulator.gps").info("Simulator: Route completed. Loop route enabled. Route restarted.")
+                        logger = logging.getLogger("vts.simulator.gps")
+                        logger.info("Route completed.")
+                        logger.info("Looping route.")
+                        logger.info("Restarting from waypoint 0.")
+                        logger.info("Motion state remains Driving.")
                     else:
                         motion.current_distance_offset = 0.0
                         motion.completed = True

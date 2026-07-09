@@ -41,50 +41,82 @@ class VehicleMotion:
 
     def update_state(self, main_power_ok):
         """Advance the motion state machine one tick."""
+        import logging
+        logger = logging.getLogger("vts.simulator.motion")
+
         if not main_power_ok:
+            prev_state = self.state
             self.state = VehicleStateEnum.POWER_FAILURE
+            logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Power Failure)")
             return
 
         if self.state == VehicleStateEnum.POWER_FAILURE:
+            prev_state = self.state
             self.state = VehicleStateEnum.RECOVERING
+            logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Power Restored)")
             return
 
         if self.state == VehicleStateEnum.RECOVERING:
+            prev_state = self.state
             self.state = VehicleStateEnum.PARKED
+            logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Recovery completed)")
+            return
+
+        # If loop_route is enabled, force the vehicle to remain in Driving state.
+        if self.loop_route:
+            if self.state != VehicleStateEnum.DRIVING:
+                prev_state = self.state
+                self.state = VehicleStateEnum.DRIVING
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: loop_route=True, forcing driving mode)")
+                self._target_speed = random.uniform(
+                    self.profile.cruising_speed_min, self.profile.cruising_speed_max
+                )
             return
 
         if self.state == VehicleStateEnum.PARKED:
             self._parked_ticks -= 1
             if self._parked_ticks <= 0:
+                prev_state = self.state
                 self.state = VehicleStateEnum.IDLE
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Parked ticks expired)")
                 self._parked_ticks = random.randint(2, 8)
             return
 
         if self.state == VehicleStateEnum.IDLE:
             # Randomly start driving or stay idle
             if random.random() < self.profile.engine_start_prob:
+                prev_state = self.state
                 self.state = VehicleStateEnum.DRIVING
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Engine started)")
                 self._target_speed = random.uniform(
                     self.profile.cruising_speed_min, self.profile.cruising_speed_max
                 )
             elif random.random() < self.profile.engine_stop_prob:
+                prev_state = self.state
                 self.state = VehicleStateEnum.PARKED
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Engine stopped)")
                 self._parked_ticks = random.randint(4, 16)
             return
 
         if self.state == VehicleStateEnum.DRIVING:
             # Occasional traffic stop
             if random.random() < self.profile.traffic_stop_prob:
+                prev_state = self.state
                 self.state = VehicleStateEnum.STOPPED_IN_TRAFFIC
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Traffic stop)")
                 return
             # Occasional engine stop
             if random.random() < self.profile.engine_stop_prob * 0.3:
+                prev_state = self.state
                 self.state = VehicleStateEnum.IDLE
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Engine idling)")
             return
 
         if self.state == VehicleStateEnum.STOPPED_IN_TRAFFIC:
             if random.random() < 0.35:
+                prev_state = self.state
                 self.state = VehicleStateEnum.DRIVING
+                logger.info(f"Simulator State Transition: {prev_state} -> {self.state} (Reason: Traffic cleared)")
             return
 
     def update_speed(self, stopped_by_immobilizer):

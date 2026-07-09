@@ -64,6 +64,11 @@ class GPSSystem:
         lat = lat1 + (lat2 - lat1) * alpha
         lon = lon1 + (lon2 - lon1) * alpha
         curr_coord = (lat, lon)
+
+        # First Tick Continuity Protection: Force exact coordinate on first tick
+        if getattr(self, "_first_tick", True):
+            curr_coord = self.last_coord
+            self._first_tick = False
         
         self.odometer += travelled
         

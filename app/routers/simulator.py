@@ -121,3 +121,31 @@ async def restart_simulator(device_uid: Optional[str] = None):
         "status": "success",
         "message": f"Restarted {device_uid if device_uid else 'all twins'}",
     }
+
+
+class UpdateRouteRequest(BaseModel):
+    device_uid: str
+    coordinates: List[List[float]]
+
+
+@router.post("/update-route", summary="Dynamically assign a custom trip path to a running twin")
+async def update_twin_route(payload: UpdateRouteRequest):
+    """
+    Assigns a custom road-snapped geometry path to the specified twin dynamically.
+    The twin resets its GPS/Motion status to begin driving along this new path immediately.
+    """
+    device_uid = payload.device_uid
+    if device_uid not in simulator_service.twins:
+        raise HTTPException(status_code=404, detail=f"VehicleTwin {device_uid} not found")
+    
+    # Convert lists of floats [lat, lon] to list of tuples
+    route_coords = [(c[0], c[1]) for c in payload.coordinates]
+    
+    try:
+        simulator_service.twins[device_uid].set_custom_route(route_coords)
+        return {
+            "status": "success",
+            "message": f"Assigned new custom route of {len(route_coords)} points to twin {device_uid}"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

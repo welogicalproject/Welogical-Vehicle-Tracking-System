@@ -310,5 +310,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ waypoints, travel_mode: travelMode }),
     }),
+
+  updateTwinRoute: (deviceUid: string, coordinates: [number, number][]): Promise<{ status: string; message: string }> =>
+    request<{ status: string; message: string }>("/simulator/update-route", {
+      method: "POST",
+      body: JSON.stringify({ device_uid: deviceUid, coordinates }),
+    }),
 };
 

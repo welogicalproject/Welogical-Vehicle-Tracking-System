@@ -193,6 +193,28 @@ export function TripPlannerPanel({
         </Button>
         {summary && (
           <Button
+            onClick={async () => {
+              if (!activeSnap) return;
+              setLoading(true);
+              setError(null);
+              try {
+                // Map coordinates {lat, lng} array back to [lat, lng] array
+                const coordsArray = summary.coordinates.map((c) => [c.lat, c.lng] as [number, number]);
+                await api.updateTwinRoute(activeSnap.vehicle.device_uid, coordsArray);
+                alert(`Trip assigned! Vehicle ${activeSnap.vehicle.vehicle_name} is now moving along your planned route.`);
+              } catch (err: any) {
+                setError(err.message || "Failed to start the trip on the simulator.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            Start Trip
+          </Button>
+        )}
+        {summary && (
+          <Button
             onClick={handleClear}
             variant="outline"
             className="border-slate-700 text-slate-300 hover:bg-slate-800"

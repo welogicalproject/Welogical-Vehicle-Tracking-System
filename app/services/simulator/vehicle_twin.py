@@ -136,6 +136,37 @@ class VehicleTwin:
             self._task = None
         logger.info(f"VehicleTwin {self.device_uid} stopped")
 
+    def set_custom_route(self, route_coords: List[Tuple[float, float]]):
+        """Dynamically override the current route path and reset motion/GPS state."""
+        if not route_coords or len(route_coords) < 2:
+            raise ValueError("Route must contain at least 2 coordinate pairs.")
+        self.path = route_coords
+        
+        # Precompute cumulative distances along the segment path
+        self.distances = [0.0]
+        for i in range(1, len(self.path)):
+            prev = self.path[i - 1]
+            curr = self.path[i]
+            dist_seg = haversine_distance(prev[0], prev[1], curr[0], curr[1])
+            self.distances.append(self.distances[-1] + dist_seg)
+        self.total_path_distance = self.distances[-1]
+
+        # Reset subsystems with new path
+        self.motion_sys.waypoints = self.path
+        self.motion_sys.distances = self.distances
+        self.motion_sys.total_path_distance = self.total_path_distance
+        self.motion_sys.current_distance_offset = 0.0  # start from origin
+        self.motion_sys.forward = True
+        self.motion_sys.completed = False
+        
+        self.gps_sys.latitude = self.path[0][0]
+        self.gps_sys.longitude = self.path[0][1]
+        self.gps_sys.last_coord = self.path[0]
+        self.gps_sys.heading = 0.0
+        self.completed = False
+        
+        logger.info(f"VehicleTwin {self.device_uid} assigned new custom route of {len(self.path)} points ({self.total_path_distance:.1f} meters)")
+
     # ------------------------------------------------------------------
     # Physics Step
     # ------------------------------------------------------------------

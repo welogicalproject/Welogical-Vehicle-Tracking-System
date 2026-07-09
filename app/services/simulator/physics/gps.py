@@ -53,12 +53,21 @@ class GPSSystem:
         
         self.odometer += travelled
         
+        # Log route progress metrics
+        import logging
+        gps_logger = logging.getLogger("vts.simulator.gps")
+        gps_logger.info(
+            f"Simulator: Waypoint index={idx}/{len(motion.waypoints)-1} | "
+            f"Offset={motion.current_distance_offset:.1f}/{motion.total_path_distance:.1f}m | "
+            f"Progress={((motion.current_distance_offset / motion.total_path_distance) * 100.0 if motion.total_path_distance > 0 else 0.0):.1f}%"
+        )
+        
         dist = haversine_distance(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
         if dist > 0.1:
             self.heading = calculate_bearing(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
         else:
             self.heading = 0.0
-
+ 
         self.last_coord = curr_coord
         self.latitude = float(round(curr_coord[0], 6))
         self.longitude = float(round(curr_coord[1], 6))

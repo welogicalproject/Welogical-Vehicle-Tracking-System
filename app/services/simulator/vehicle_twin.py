@@ -93,6 +93,56 @@ class VehicleTwin:
             self.distances.append(self.distances[-1] + dist_seg)
         self.total_path_distance = self.distances[-1]
 
+        # Simulator State Persistence: Bootstrap from last recorded position
+        last_latitude: Optional[float] = None
+        last_longitude: Optional[float] = None
+        last_speed: float = 0.0
+        last_odometer: float = float(random.randint(150000, 500000))
+        last_ign: int = 0
+
+        if db_vehicle_id is not None:
+            try:
+                # Query the latest recorded location synchronously or using context managers
+                from app.database import SessionLocal
+                with SessionLocal() as session:
+                    from app.models.location import Location
+                    from sqlalchemy import select
+                    stmt = select(Location).where(Location.vehicle_id == db_vehicle_id).order_by(Location.timestamp.desc()).limit(1)
+                    loc_res = session.execute(stmt).scalars().first()
+                    if loc_res:
+                        last_latitude = loc_res.latitude
+                        last_longitude = loc_res.longitude
+                        last_speed = loc_res.speed
+                        if loc_res.extra_data and "gps" in loc_res.extra_data:
+                            last_odometer = loc_res.extra_data["gps"].get("odo", last_odometer)
+                        if loc_res.extra_data and "io" in loc_res.extra_data:
+                            last_ign = loc_res.extra_data["io"].get("ign", 0)
+            except Exception as e:
+                logger.error(f"[Persistence] Failed to load last state for twin {device_uid}: {e}")
+
+        # Find closest waypoint segment to snap to last position to prevent discontinuities
+        start_offset = 0.0
+        forward_dir = True
+        
+        if last_latitude is not None and last_longitude is not None:
+            # Snap to closest point on self.path to determine offset
+            min_dist = float("inf")
+            closest_idx = 0
+            for i, pt in enumerate(self.path):
+                d = haversine_distance(last_latitude, last_longitude, pt[0], pt[1])
+                if d < min_dist:
+                    min_dist = d
+                    closest_idx = i
+            
+            # Use distance offset of closest point
+            start_offset = self.distances[closest_idx]
+            logger.info(f"[Persistence] Snapped twin {device_uid} to waypoint index {closest_idx}/{len(self.path)-1} "
+                        f"at offset {start_offset:.1f}m (deviation: {min_dist:.1f}m) to preserve route history")
+        else:
+            # First boot fallback: random cruising offset
+            start_offset = random.uniform(0.0, self.total_path_distance)
+            forward_dir = random.choice([True, False])
+
         # Twin Subsystems Initializations
         self.profile = VEHICLE_PROFILES[index % len(VEHICLE_PROFILES)]
         self.power_sys = PowerSystem(self.profile)
@@ -100,8 +150,14 @@ class VehicleTwin:
             self.profile, self.speed_multiplier, self.loop_route,
             self.path, self.distances, self.total_path_distance
         )
-        self.gps_sys = GPSSystem(self.path[0], float(random.randint(150000, 500000)))
+        self.motion_sys.current_distance_offset = start_offset
+        self.motion_sys.forward = forward_dir
+        self.motion_sys.speed = last_speed
+
+        start_pt = self.path[0] if (last_latitude is None or last_longitude is None) else (last_latitude, last_longitude)
+        self.gps_sys = GPSSystem(start_pt, last_odometer)
         self.io_sys = IOSystem()
+        self.io_sys.ignition = last_ign
         self.fuel_sys = FuelSystem(self.profile, capacity_liters=self.profile.fuel_capacity)
         self.engine_sys = EngineSystem(self.profile)
         self.trans_sys = TransmissionSystem()

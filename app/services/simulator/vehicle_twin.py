@@ -173,10 +173,12 @@ class VehicleTwin:
     async def start(self) -> None:
         if self.is_running:
             return
+        logger.info(f"Starting twin {self.device_uid}")
         self.is_running = True
         self.start_time = datetime.now(timezone.utc)
         self.last_tick_time = self.start_time
         self._task = asyncio.create_task(self._run_loop())
+        logger.info(f"Twin started successfully.")
         logger.info(f"Started VehicleTwin {self.device_uid} (db_id={self.db_vehicle_id})")
 
     async def stop(self) -> None:
@@ -288,6 +290,7 @@ class VehicleTwin:
             tick_start = time.perf_counter()
             try:
                 self.last_tick_time = datetime.now(timezone.utc)
+                logger.info(f"Twin tick...")
                 packet_dict = self.step()
                 if packet_dict:
                     packet = VTSPacket(**packet_dict)
@@ -331,6 +334,7 @@ class VehicleTwin:
                 break
             except Exception as e:
                 self.error_count += 1
+                logger.error(f"Twin stopped unexpectedly: {e}", exc_info=True)
                 logger.error(f"VehicleTwin {self.device_uid} Telemetry pipeline failed: {e}", exc_info=True)
                 logger.info(f"VehicleTwin {self.device_uid} error handler: Continuing next tick...")
 

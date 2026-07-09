@@ -234,11 +234,13 @@ class SimulatorService:
         """
         For each route index, attempt to load a cached interpolated path from the
         DB route_cache table (provider="simulator"). If not cached, compute via
-        interpolate_waypoints and persist. Returns dict of index → path list.
+        road-snapping (if GOOGLE_ROUTES_ENABLED) or fall back to interpolate_waypoints,
+        and persist. Returns dict of index → path list.
         """
         from app.models.route_cache import RouteCache
         from app.services.simulator.physics import TEMPLATE_ROUTES, interpolate_waypoints
         from sqlalchemy import select
+        import json
 
         paths: Dict[int, List[Tuple[float, float]]] = {}
 
@@ -259,7 +261,35 @@ class SimulatorService:
 
             # Compute fresh
             waypoints = TEMPLATE_ROUTES[idx % len(TEMPLATE_ROUTES)]
-            path = interpolate_waypoints(waypoints, points_per_segment=50)
+            path = []
+
+            # Check if road snapping is enabled
+            if settings.GOOGLE_ROUTES_ENABLED and settings.GOOGLE_ROUTES_API_KEY:
+                try:
+                    from app.services.google_routes import call_google_routes_api
+                    from app.routers.route import decode_polyline
+                    logger.info(f"[RouteCache] Calling internal Google Routes API to snap route {idx}")
+                    origin_lat, origin_lon = waypoints[0]
+                    dest_lat, dest_lon = waypoints[-1]
+                    intermediates = waypoints[1:-1]
+                    result = await call_google_routes_api(
+                        origin_lat=origin_lat,
+                        origin_lon=origin_lon,
+                        destination_lat=dest_lat,
+                        destination_lon=dest_lon,
+                        waypoints=intermediates
+                    )
+                    if result.get("status") == "SUCCESS" and result.get("encoded_polyline"):
+                        raw_coords = decode_polyline(result["encoded_polyline"])
+                        path = [(c[0], c[1]) for c in raw_coords]
+                        logger.info(f"[RouteCache] Successfully snapped route {idx} ({len(path)} points)")
+                except Exception as api_err:
+                    logger.error(f"[RouteCache] Failed to snap route {idx} via Google API: {api_err}. Falling back to straight-line interpolation.")
+
+            # Fallback to straight-line interpolation if API snapping is disabled or failed
+            if not path:
+                path = interpolate_waypoints(waypoints, points_per_segment=50)
+
             paths[idx] = path
 
             # Persist to DB

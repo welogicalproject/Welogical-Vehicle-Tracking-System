@@ -19,8 +19,12 @@ import {
   FileText,
   Users,
   Sliders,
+<<<<<<< HEAD
   Calendar,
   X
+=======
+  Calendar
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { api } from "../lib/api";

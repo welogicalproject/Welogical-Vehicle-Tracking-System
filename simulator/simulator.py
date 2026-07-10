@@ -15,17 +15,15 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 
+# Import config from local config module
+from config import API_BASE_URL, TELEMETRY_INTERVAL, RETRY_INTERVAL
+
 # Force stdout to use UTF-8 encoding in environments with CP1252 defaults (Windows cmd.exe)
 if sys.stdout.encoding != 'utf-8':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
-
-# --- CONFIGURATION FROM ENVIRONMENT VARIABLES / DEFAULTS ---
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
-SEND_INTERVAL_SECONDS = float(os.environ.get("SEND_INTERVAL_SECONDS", "10"))
-RUN_FOREVER = os.environ.get("RUN_FOREVER", "True").lower() in ("true", "1", "yes")
 
 # Base vehicle profiles for registration (no waypoints/route coordinates)
 DEFAULT_VEHICLES = [
@@ -68,7 +66,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 # --- API CLIENT FUNCTIONS (URLLIB) ---
 def api_request(path, method="GET", data=None):
     """Make HTTP requests to FastAPI backend with urllib."""
-    url = f"{API_URL}{path}"
+    url = f"{API_BASE_URL}{path}"
     headers = {
         "Content-Type": "application/json",
         "Connection": "close"
@@ -143,36 +141,8 @@ class VehicleState:
         self.vehicle_type = vehicle_type
         
         self.stopped_by_immobilizer = False
-        self.send_interval = SEND_INTERVAL_SECONDS
+        self.send_interval = TELEMETRY_INTERVAL
         
-<<<<<<< HEAD
-        # Load snapped path coordinates from the backend router
-        status, response = api_request("/routes/snap-path", "POST", {
-            "waypoints": meta["waypoints"],
-            "travel_mode": "DRIVE"
-        })
-        if status == 200 and "coordinates" in response:
-            self.path = [(c["lat"], c["lng"]) for c in response["coordinates"]]
-            print(f"[{self.device_uid}] Loaded snapped road path with {len(self.path)} points.")
-        else:
-            print(f"[{self.device_uid}] Route snapping failed (status: {status}). Falling back to linear interpolation.")
-            self.path = interpolate_waypoints(meta["waypoints"], points_per_segment=50)
-        
-        # Precompute cumulative distances along the segment path list
-        self.distances = [0.0]
-        for i in range(1, len(self.path)):
-            prev = self.path[i-1]
-            curr = self.path[i]
-            dist_seg = haversine_distance(prev[0], prev[1], curr[0], curr[1])
-            self.distances.append(self.distances[-1] + dist_seg)
-        self.total_path_distance = self.distances[-1]
-        
-        # Start at a random distance offset along the path
-        self.current_distance_offset = random.uniform(0.0, self.total_path_distance)
-        self.forward = random.choice([True, False])
-        
-        # Initial odometer (random value between 150km and 500km in meters)
-=======
         # Route Properties (Loaded dynamically from the backend)
         self.route_id = None
         self.route_status = None
@@ -180,22 +150,23 @@ class VehicleState:
         self.current_index = 0
         
         # Initial odometer & message counters
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         self.odometer = float(random.randint(150000, 500000))
         self.msg_id = 1
-<<<<<<< HEAD
-        self.last_coord = self.path[0]
-        self.speed = 50.0  # km/h
-=======
         self.last_coord = (0.0, 0.0)
         self.speed = 0.0  # km/h
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         self.stop_ticks = 0
+        self.last_retry_time = 0
 
     def query_assigned_route(self):
         """Query the backend to check if an active route has been assigned to this vehicle."""
         if not self.db_id:
             return False
+
+        # Throttle route queries based on RETRY_INTERVAL to avoid spamming the backend
+        now = time.time()
+        if now - self.last_retry_time < RETRY_INTERVAL:
+            return False
+        self.last_retry_time = now
 
         status, response = api_request(f"/vehicles/{self.db_id}/assigned-route", "GET")
         if status == 200 and "id" in response:
@@ -271,80 +242,9 @@ class VehicleState:
         # Handle immobilizer overrides
         if self.stopped_by_immobilizer:
             self.speed = 0.0
-<<<<<<< HEAD
-            self.stop_ticks = 0
-        else:
-            # Simulate traffic light / stop scenario (5% probability of stopping)
-            if self.stop_ticks > 0:
-                self.stop_ticks -= 1
-                self.speed = 0.0
-            elif random.random() < 0.05:
-                # Stop for 2-3 intervals
-                self.stop_ticks = random.randint(2, 3)
-                self.speed = 0.0
-            else:
-                # Fluctuate speed between 35 km/h and 75 km/h
-                speed_change = random.uniform(-6, 6)
-                self.speed = max(35.0, min(75.0, self.speed + speed_change))
-            
-        # Move distance offset along the path crawler
-        travelled = 0.0
-        if self.speed > 0:
-            travelled = (self.speed * 1000.0 / 3600.0) * self.send_interval
-            if self.forward:
-                self.current_distance_offset += travelled
-                if self.current_distance_offset >= self.total_path_distance:
-                    self.current_distance_offset = self.total_path_distance - (self.current_distance_offset - self.total_path_distance)
-                    self.forward = False
-            else:
-                self.current_distance_offset -= travelled
-                if self.current_distance_offset <= 0.0:
-                    self.current_distance_offset = abs(self.current_distance_offset)
-                    self.forward = True
-                    
-        # Interpolate coordinates along the segment offset
-        idx = 0
-        while idx < len(self.distances) - 2 and self.distances[idx+1] < self.current_distance_offset:
-            idx += 1
-            
-        d1 = self.distances[idx]
-        d2 = self.distances[idx+1]
-        lat1, lon1 = self.path[idx]
-        lat2, lon2 = self.path[idx+1]
-        segment_dist = d2 - d1
-        if segment_dist > 0.001:
-            alpha = (self.current_distance_offset - d1) / segment_dist
-        else:
-            alpha = 0.0
-            
-        lat = lat1 + (lat2 - lat1) * alpha
-        lon = lon1 + (lon2 - lon1) * alpha
-        curr_coord = (lat, lon)
-        
-        # Log simulator engine status details
-        print(f"[{self.device_uid}] Engine Status: Snapped Points={len(self.path)}, Coord Index={idx}, Travelled Offset={self.current_distance_offset:.1f} m, Speed={self.speed:.1f} km/h")
-        
-        # Odometer calculation
-        self.odometer += travelled
-        
-        # Direction / Bearing calculation
-        dist = haversine_distance(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
-        if dist > 0.1:
-            direction = calculate_bearing(self.last_coord[0], self.last_coord[1], curr_coord[0], curr_coord[1])
-        else:
-            direction = 0.0
-            
-        self.last_coord = curr_coord
-        
-        # Altitude variation
-        altitude = self.alt_base + random.uniform(-2.5, 2.5)
-        
-        # Satellite variation
-=======
 
         # Altitude and Satellites variation
         altitude = 25.0 + random.uniform(-2.5, 2.5)
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         satellites = random.randint(9, 15)
         ign = 1 if self.speed > 0 or self.current_index < len(self.path) - 1 else 0
 
@@ -407,8 +307,9 @@ class VehicleState:
 def main():
     print("=" * 60)
     print("[START] VTS Telemetry Simulator Starting...")
-    print(f"Backend API URL: {API_URL}")
-    print(f"Send Interval: {SEND_INTERVAL_SECONDS} seconds")
+    print(f"Backend API URL: {API_BASE_URL}")
+    print(f"Send Interval: {TELEMETRY_INTERVAL} seconds")
+    print(f"Retry Interval: {RETRY_INTERVAL} seconds")
     print(f"Mode: Backend Managed Routes (Continuous Listening)")
     print("=" * 60)
     
@@ -480,7 +381,7 @@ def main():
                     print(f"[{cyan}{uid}{reset}] Hardware state: Immobilizer DISENGAGED.")
             
         # Pause before next tick
-        time.sleep(SEND_INTERVAL_SECONDS)
+        time.sleep(TELEMETRY_INTERVAL)
 
 
 if __name__ == "__main__":

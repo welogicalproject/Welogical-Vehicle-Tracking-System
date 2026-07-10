@@ -18,12 +18,16 @@ from app.routers import (
     trip_router,
     driver_router,
     route_router,
+<<<<<<< HEAD
     analytics_router,
     operations_router,
     reports_router,
     notifications_router,
     websocket_router,
     simulator_router
+=======
+    planned_route_router
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 )
 import asyncio
 import os
@@ -95,12 +99,16 @@ app.include_router(device_command_router)
 app.include_router(trip_router)
 app.include_router(driver_router)
 app.include_router(route_router)
+<<<<<<< HEAD
 app.include_router(analytics_router)
 app.include_router(operations_router)
 app.include_router(reports_router)
 app.include_router(notifications_router)
 app.include_router(websocket_router)
 app.include_router(simulator_router)
+=======
+app.include_router(planned_route_router)
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 
 @app.get("/")
@@ -120,12 +128,17 @@ async def run_migrations():
         from alembic.config import Config
         from alembic import command
         import sys
+<<<<<<< HEAD
         import os
         # Dynamically determine the base project directory where alembic.ini resides
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if base_dir not in sys.path:
             sys.path.insert(0, base_dir)
         alembic_cfg = Config(os.path.join(base_dir, "alembic.ini"))
+=======
+        sys.path.insert(0, "e:\\Embedded Projects\\GPS_Project")
+        alembic_cfg = Config("e:\\Embedded Projects\\GPS_Project\\alembic.ini")
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         command.upgrade(alembic_cfg, "head")
         return {"status": "success", "message": "Alembic upgrade head completed successfully."}
     except Exception as e:

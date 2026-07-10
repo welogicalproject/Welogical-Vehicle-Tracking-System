@@ -161,7 +161,11 @@ CREATE DATABASE vts_db;
    ```
 4. Run the web server:
    ```bash
+<<<<<<< HEAD
    uvicorn app.main:app --reload
+=======
+   python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --reload-dir alembic --reload-include "*.py" --reload-exclude venv --reload-exclude .git --reload-exclude __pycache__ --reload-exclude dashboard/node_modules --reload-exclude dashboard/.next
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
    ```
    FastAPI will start on [http://localhost:8000](http://localhost:8000). Access Swagger API docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 

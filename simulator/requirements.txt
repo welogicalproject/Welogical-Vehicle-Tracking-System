@@ -1,0 +1,4 @@
+# Standalone VTS Telemetry Simulator Requirements
+# This simulator uses only Python standard built-in libraries (urllib, json, math, time, os, sys).
+# No external package installations (e.g. requests) are required.
+# Minimum Python Version: Python 3.8+

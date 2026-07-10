@@ -50,7 +50,11 @@ export class PlannedRouteLayer implements IMapLayer {
           },
         ],
         zIndex: 100, // Make it appear above other routes
+<<<<<<< HEAD
       } as any);
+=======
+      });
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
     }
 
     if (visible && coordinates && coordinates.length > 0) {

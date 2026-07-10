@@ -7,7 +7,12 @@ import { MetricRow } from "../shared/MetricRow";
 import { TrackingDetailTab } from "../../hooks/useVehicleSelection";
 import { VehicleTrackingSnapshot } from "../../types";
 import { cn } from "../../lib/utils";
+<<<<<<< HEAD
 import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal, getFuelLevel } from "../../utils/tracking";
+=======
+import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal } from "../../utils/tracking";
+import { VehicleRoutesTab } from "./VehicleRoutesTab";
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 interface VehicleDetailsPanelProps {
   selectedVehicleId: number | "all";
@@ -71,7 +76,7 @@ export function VehicleDetailsPanel({
             </div>
 
             <div className="flex border-b border-[#1e294b]/30">
-              {(["live", "status", "history", "events"] as TrackingDetailTab[]).map((tab) => (
+              {(["live", "status", "history", "events", "routes"] as TrackingDetailTab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => onDetailTabChange(tab)}
@@ -175,6 +180,13 @@ export function VehicleDetailsPanel({
                     )}
                   </div>
                 </div>
+              )}
+
+              {detailTab === "routes" && (
+                <VehicleRoutesTab
+                  vehicleId={selectedSnapshot.vehicle.id}
+                  currentLocation={selectedSnapshot.latest_location}
+                />
               )}
             </div>
 

@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 from datetime import datetime, timezone
 from app.utils.datetime import normalize_datetime
+=======
+from datetime import datetime
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 from typing import List, Optional
 from fastapi import APIRouter, Depends, status, Query, HTTPException
 from fastapi.responses import Response
@@ -18,7 +22,10 @@ from app.services.trip_replay import get_trip_replay_points
 from app.services.trip_export import serialize_trip_to_geojson, get_trip_csv_content
 from app.services.route_cache import get_or_compute_trip_route
 from app.crud.vehicle import get_vehicle
+<<<<<<< HEAD
 from app.exceptions import EntityNotFoundError
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 router = APIRouter(tags=["Trips"])
 
@@ -40,8 +47,11 @@ async def get_vehicle_trips(
 
     query = select(Trip).where(Trip.vehicle_id == vehicle_id)
 
+<<<<<<< HEAD
     start_time = normalize_datetime(start_time)
     end_time = normalize_datetime(end_time)
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
     if start_time:
         query = query.where(Trip.start_time >= start_time)
     if end_time:
@@ -53,7 +63,10 @@ async def get_vehicle_trips(
     result = await db.execute(query)
     return list(result.scalars().all())
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 @router.post("/vehicles/{vehicle_id}/trips/rebuild", status_code=status.HTTP_200_OK)
 async def rebuild_trips(
     vehicle_id: int,

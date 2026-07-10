@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Event, VehicleTrackingSnapshot } from "../types";
 import { logTrackingDebug } from "../utils/tracking";
 
-export type TrackingDetailTab = "live" | "status" | "history" | "events";
+export type TrackingDetailTab = "live" | "status" | "history" | "events" | "routes";
 
 export function useVehicleSelection(snapshots: VehicleTrackingSnapshot[], recentEvents: Event[]) {
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | "all">("all");

@@ -8,6 +8,10 @@ from app.models.raw_packet import RawPacket
 from app.models.vehicle import Vehicle
 from app.models.device_command import DeviceCommand
 from app.models.command_log import CommandLog
+<<<<<<< HEAD
+=======
+from app.models.enums import CommandStatus
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 from app.schemas.vts import VTSPacket
 from app.services.packet_validator import validate_telemetry_packet
 from app.services.structured_logger import log_telemetry_stage
@@ -84,7 +88,11 @@ async def run_synchronous_telemetry_pipeline(
         cmd_stmt = select(DeviceCommand).where(
             and_(
                 DeviceCommand.vehicle_id == vehicle.id,
+<<<<<<< HEAD
                 DeviceCommand.status == "Queued"
+=======
+                DeviceCommand.status == CommandStatus.PENDING
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             )
         ).order_by(asc(DeviceCommand.created_at)).limit(1)
         cmd_res = await db.execute(cmd_stmt)
@@ -92,14 +100,23 @@ async def run_synchronous_telemetry_pipeline(
 
         cmd_payload = None
         if pending_cmd:
+<<<<<<< HEAD
             pending_cmd.status = "Delivered"
+=======
+            pending_cmd.status = CommandStatus.SENT
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             pending_cmd.sent_at = datetime.utcnow()
             
             cmd_log = CommandLog(
                 command_id=pending_cmd.id,
                 vehicle_id=vehicle.id,
+<<<<<<< HEAD
                 status="Delivered",
                 message="Delivered to device via telemetry response payload"
+=======
+                status=CommandStatus.SENT,
+                message="Delivered to device in HTTP telemetry response payload"
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             )
             db.add(cmd_log)
             
@@ -120,7 +137,10 @@ async def run_synchronous_telemetry_pipeline(
         response_payload = {"result": True, "msg": "Data Success"}
         if cmd_payload:
             response_payload["cmd"] = cmd_payload
+<<<<<<< HEAD
             response_payload["cmd_id"] = pending_cmd.id
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
         # Calculate packet latency in seconds
         now_epoch = datetime.now(timezone.utc).timestamp()

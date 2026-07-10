@@ -370,7 +370,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 <Button size="sm" variant="outline" onClick={openAssignModal} className="h-7 text-[10px] px-2 border-[#1e294b] text-slate-300 hover:text-white">
                   Change
                 </Button>
+<<<<<<< HEAD
                 <Button size="sm" variant="danger" onClick={handleRemoveDriver} className="h-7 text-[10px] px-2 bg-red-950 hover:bg-red-900 border-red-800 text-red-300">
+=======
+                <Button size="sm" variant="destructive" onClick={handleRemoveDriver} className="h-7 text-[10px] px-2 bg-red-950 hover:bg-red-900 border-red-800 text-red-300">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                   Remove
                 </Button>
               </div>
@@ -517,7 +521,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
             </Button>
 
             <Button 
+<<<<<<< HEAD
               variant="danger" 
+=======
+              variant="destructive" 
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
               onClick={handleArchiveVehicle} 
               className="w-full text-xs font-bold py-2 justify-start gap-2 bg-red-950/80 hover:bg-red-900 border border-red-800/40 text-red-300"
             >
@@ -679,7 +687,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                   )}
 
                   {/* Row 1: Name + Phone */}
+<<<<<<< HEAD
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+=======
+                  <div className="grid grid-cols-2 gap-3">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Driver Name *</label>
                       <Input
@@ -703,7 +715,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                   </div>
 
                   {/* Row 2: Email + Emergency Contact */}
+<<<<<<< HEAD
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+=======
+                  <div className="grid grid-cols-2 gap-3">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Email</label>
                       <Input
@@ -727,7 +743,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                   </div>
 
                   {/* Row 3: License + Expiry */}
+<<<<<<< HEAD
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+=======
+                  <div className="grid grid-cols-2 gap-3">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">License Number *</label>
                       <Input
@@ -826,7 +846,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 </div>
               )}
 
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+=======
+              <div className="grid grid-cols-2 gap-4">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Vehicle Name *</label>
                   <Input value={vehicleName} onChange={(e) => setVehicleName(e.target.value)} required placeholder="e.g. Surat Express" className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -837,7 +861,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 </div>
               </div>
 
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+=======
+              <div className="grid grid-cols-3 gap-4">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Vehicle Type</label>
                   <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="w-full bg-[#131a2d] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all h-9">
@@ -861,7 +889,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 </div>
               </div>
 
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+=======
+              <div className="grid grid-cols-3 gap-4">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</label>
                   <Input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} placeholder="Tata, Mahindra..." className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -876,7 +908,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 </div>
               </div>
 
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+=======
+              <div className="grid grid-cols-3 gap-4">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">VIN</label>
                   <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder="Chassis number..." className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -891,7 +927,11 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 </div>
               </div>
 
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+=======
+              <div className="grid grid-cols-2 gap-4">
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Fuel Type</label>
                   <select value={fuelType} onChange={(e) => setFuelType(e.target.value)} className="w-full bg-[#131a2d] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all h-9">

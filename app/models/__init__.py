@@ -10,6 +10,7 @@ from app.models.trip import Trip
 from app.models.route_cache import RouteCache, TripRouteCacheLink, GoogleRouteUsageEvent
 from app.models.driver import Driver
 from app.models.driver_assignment import DriverAssignment
+<<<<<<< HEAD
 from app.models.analytics_checkpoint import AnalyticsCheckpoint
 from app.models.vehicle_daily_summary import VehicleDailySummary
 from app.models.fleet_daily_summary import FleetDailySummary
@@ -17,6 +18,9 @@ from app.models.driver_daily_summary import DriverDailySummary
 from app.models.maintenance_summary import MaintenanceSummary
 from app.models.fleet_operations import VehicleOperations, FleetOperationsLive
 from app.models.notification_history import NotificationHistory
+=======
+from app.models.planned_route import PlannedRoute, PlannedRoutePoint, VehicleRouteAssignment
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 __all__ = [
     "Base",
@@ -33,6 +37,7 @@ __all__ = [
     "GoogleRouteUsageEvent",
     "Driver",
     "DriverAssignment",
+<<<<<<< HEAD
     "AnalyticsCheckpoint",
     "VehicleDailySummary",
     "FleetDailySummary",
@@ -41,4 +46,9 @@ __all__ = [
     "VehicleOperations",
     "FleetOperationsLive",
     "NotificationHistory",
+=======
+    "PlannedRoute",
+    "PlannedRoutePoint",
+    "VehicleRouteAssignment",
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 ]

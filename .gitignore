@@ -17,7 +17,18 @@ __pycache__/
 .pytest_cache/
 .cache/
 
+<<<<<<< HEAD
 # IDE & OS
+=======
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# VS Code
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 .vscode/
 .idea/
 .DS_Store

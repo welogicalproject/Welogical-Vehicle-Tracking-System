@@ -54,6 +54,7 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
         if packet.dbg:
             extra_data["dbg"] = packet.dbg.model_dump()
 
+<<<<<<< HEAD
         # Capture extra dynamic telemetry objects (Telemetry Spec v2 fields like fuel, power, engine)
         if packet.model_extra:
             for k, v in packet.model_extra.items():
@@ -68,6 +69,8 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
         )
         prev_location = prev_loc_res.scalars().first()
 
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         db_location = Location(
             vehicle_id=vehicle.id,
             latitude=packet.gps.loc[0],
@@ -80,6 +83,7 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
         db.add(db_location)
         log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "LOCATION_INSERT", start_time, "SUCCESS")
 
+<<<<<<< HEAD
         # Broadcast real-time telemetry coordinates
         from app.services.websocket_manager import ws_manager
         await ws_manager.broadcast("telemetry", {
@@ -99,6 +103,8 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
             "extra_data": db_location.extra_data
         })
 
+=======
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         # 3. Update vehicle last_seen
         db_last_seen = vehicle.last_seen
         if db_last_seen and db_last_seen.tzinfo is not None:
@@ -110,6 +116,7 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
             vehicle.last_seen = ctx.timestamp
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "UPDATE_LAST_SEEN", start_time, "SUCCESS")
 
+<<<<<<< HEAD
         # 4. Decode Warning & Critical events (Legacy decoder and new transition-based EventEngine)
         try:
             # Execute legacy event decoder
@@ -142,6 +149,11 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
                         "created_at": str(event.created_at)
                     })
 
+=======
+        # 4. Decode Warning & Critical events
+        try:
+            await decode_and_save_event(db, vehicle.id, packet)
+>>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "EVENT_ENGINE", start_time, "SUCCESS")
         except Exception as e:
             logger.error(f"Event Engine failed inside background job for vehicle={vehicle.id}: {e}", exc_info=True)

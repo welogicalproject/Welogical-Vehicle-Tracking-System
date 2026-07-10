@@ -1,7 +1,7 @@
 """Add planned routes tables
 
 Revision ID: 008_add_planned_routes
-Revises: 007_add_route_cache_tables
+Revises: 008_reconcile
 Create Date: 2026-07-10 12:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "008_add_planned_routes"
-down_revision: Union[str, None] = "007_add_route_cache_tables"
+down_revision: Union[str, None] = "008_reconcile"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

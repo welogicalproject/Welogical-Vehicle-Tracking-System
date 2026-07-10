@@ -272,3 +272,23 @@ export interface TripGoogleRoute {
   created_at: string;
 }
 
+export interface PlannedRoutePoint {
+  id: number;
+  route_id: number;
+  sequence_number: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface PlannedRoute {
+  id: number;
+  name: string;
+  start_location: string;
+  destination: string;
+  distance: number;
+  estimated_duration: number;
+  status: string; // "Pending" | "Assigned" | "Running" | "Completed"
+  created_at: string;
+  updated_at: string;
+  points: PlannedRoutePoint[];
+}

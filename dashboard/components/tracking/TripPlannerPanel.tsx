@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { VehicleTrackingSnapshot } from "../../types";
 import { Button } from "../ui/button";
-import { Loader2, Navigation, MapPin } from "lucide-react";
+import { Loader2, Navigation, MapPin, CheckCircle2 } from "lucide-react";
+import { api } from "../../lib/api";
 
-interface PlannedRouteSummary {
+interface SnapSummary {
   distance_meters: number;
   duration_seconds: number;
   status: string;
@@ -13,13 +14,15 @@ interface PlannedRouteSummary {
 interface TripPlannerPanelProps {
   selectedVehicleId: number | "all";
   snapshots: VehicleTrackingSnapshot[];
-  onRoutePlanned: (summary: PlannedRouteSummary | null) => void;
+  onRoutePlanned: (summary: SnapSummary | null) => void;
+  onRouteSaved?: () => void; // called after successful POST /routes so parent can refresh
 }
 
 export function TripPlannerPanel({
   selectedVehicleId,
   snapshots,
   onRoutePlanned,
+  onRouteSaved,
 }: TripPlannerPanelProps) {
   const [routeName, setRouteName] = useState("");
   const [startLocation, setStartLocation] = useState("");
@@ -27,8 +30,9 @@ export function TripPlannerPanel({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const [summary, setSummary] = useState<PlannedRouteSummary | null>(null);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  const [summary, setSummary] = useState<SnapSummary | null>(null);
 
   const startAutocompleteRef = useRef<any>(null);
   const startInputRef = useRef<HTMLInputElement>(null);
@@ -110,25 +114,16 @@ export function TripPlannerPanel({
     setLoading(true);
     setError(null);
     setSummary(null);
+    setSavedSuccess(false);
 
     try {
-      const response = await fetch("http://localhost:8000/routes/snap-path", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          waypoints: [
-            [startCoords.current.lat, startCoords.current.lng],
-            [destCoords.current.lat, destCoords.current.lng],
-          ],
-          travel_mode: "DRIVE"
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to plan route.");
-      }
-
-      const data = await response.json();
+      const data = await api.snapPath(
+        [
+          [startCoords.current.lat, startCoords.current.lng],
+          [destCoords.current.lat, destCoords.current.lng],
+        ],
+        "DRIVE"
+      );
       setSummary(data);
       onRoutePlanned(data);
     } catch (err: any) {
@@ -148,33 +143,30 @@ export function TripPlannerPanel({
 
     setSaving(true);
     setError(null);
+    setSavedSuccess(false);
 
     try {
-      const response = await fetch("http://localhost:8000/routes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: routeName,
-          start_location: startLocation || "Custom Start",
-          destination: destination || "Custom End",
-          distance: summary.distance_meters / 1000,
-          estimated_duration: summary.duration_seconds,
-          points: summary.coordinates.map((c: any, i: number) => ({
-            sequence_number: i,
-            latitude: c.lat,
-            longitude: c.lng
-          }))
-        })
+      await api.createPlannedRoute({
+        name: routeName.trim(),
+        start_location: startLocation || "Custom Start",
+        destination: destination || "Custom End",
+        distance: summary.distance_meters / 1000,
+        estimated_duration: summary.duration_seconds,
+        points: summary.coordinates.map((c: any, i: number) => ({
+          sequence_number: i,
+          latitude: c.lat,
+          longitude: c.lng,
+        })),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save route. Check API status.");
-      }
-
-      handleClear();
-      alert("Route created and saved successfully!");
+      setSavedSuccess(true);
+      onRouteSaved?.(); // notify parent to refresh route list
+      // Reset form after short delay so user sees success banner
+      setTimeout(() => {
+        handleClear();
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || "An error occurred while saving the route.");
+      setError(err.message || "Failed to save route. Check API status.");
     } finally {
       setSaving(false);
     }
@@ -190,6 +182,7 @@ export function TripPlannerPanel({
     destCoords.current = null;
     setSummary(null);
     setError(null);
+    setSavedSuccess(false);
     onRoutePlanned(null);
   };
 
@@ -262,8 +255,15 @@ export function TripPlannerPanel({
         </div>
       )}
 
+      {savedSuccess && (
+        <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 p-2.5 rounded border border-emerald-500/20">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>Route saved successfully! It is now available for assignment.</span>
+        </div>
+      )}
+
       {/* Summary Card */}
-      {summary && (
+      {summary && !savedSuccess && (
         <div className="bg-indigo-500/10 border border-indigo-500/20 rounded p-3 flex flex-col gap-2">
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-400">Distance</span>
@@ -276,6 +276,10 @@ export function TripPlannerPanel({
             <span className="text-white font-semibold">
               {Math.round(summary.duration_seconds / 60)} mins
             </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-slate-400">Waypoints</span>
+            <span className="text-white font-semibold">{summary.coordinates.length} points</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-400">ETA</span>
@@ -309,7 +313,7 @@ export function TripPlannerPanel({
             </Button>
           )}
         </div>
-        {summary && (
+        {summary && !savedSuccess && (
           <Button
             onClick={handleSaveRoute}
             disabled={saving || !routeName.trim()}

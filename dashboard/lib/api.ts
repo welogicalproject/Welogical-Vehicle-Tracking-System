@@ -1,4 +1,4 @@
-import { Vehicle, Location, RawPacket, SystemStats, Event, EventStats, DeviceConfig, DeviceCommand, CommandLog, VehicleTrackingSnapshot, Trip, TripSummary, ReplayResponse, Driver, DriverAssignment, TripGoogleRoute } from "../types";
+import { Vehicle, Location, RawPacket, SystemStats, Event, EventStats, DeviceConfig, DeviceCommand, CommandLog, VehicleTrackingSnapshot, Trip, TripSummary, ReplayResponse, Driver, DriverAssignment, TripGoogleRoute, PlannedRoute } from "../types";
 
 function getBaseUrl(): string {
   // Priority 1: environment variable (populated during build or runtime)
@@ -312,6 +312,39 @@ export const api = {
     request<{ status: string; message: string }>("/simulator/update-route", {
       method: "POST",
       body: JSON.stringify({ device_uid: deviceUid, coordinates }),
+    }),
+
+  // Planned Routes
+  getPlannedRoutes: (skip = 0, limit = 100): Promise<PlannedRoute[]> =>
+    request<PlannedRoute[]>(`/routes?skip=${skip}&limit=${limit}`),
+
+  getPlannedRoute: (routeId: number): Promise<PlannedRoute> =>
+    request<PlannedRoute>(`/routes/${routeId}`),
+
+  createPlannedRoute: (payload: {
+    name: string;
+    start_location: string;
+    destination: string;
+    distance: number;
+    estimated_duration: number;
+    points: { sequence_number: number; latitude: number; longitude: number }[];
+  }): Promise<PlannedRoute> =>
+    request<PlannedRoute>("/routes", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  assignRoute: (vehicleId: number, routeId: number): Promise<any> =>
+    request<any>(`/vehicles/${vehicleId}/assign-route`, {
+      method: "POST",
+      body: JSON.stringify({ route_id: routeId }),
+    }),
+
+  getAssignedRoute: (vehicleId: number): Promise<PlannedRoute | null> =>
+    request<PlannedRoute>(`/vehicles/${vehicleId}/assigned-route`).catch((err: Error) => {
+      // 404 means no active assignment — return null instead of throwing
+      if (err.message.includes("404") || err.message.toLowerCase().includes("not found")) return null;
+      throw err;
     }),
 };
 

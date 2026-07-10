@@ -1,7 +1,7 @@
 """009 convert command_logs status to string
 
 Revision ID: 009
-Revises: 008
+Revises: 008_add_planned_routes
 Create Date: 2026-07-08
 
 Converts command_logs.status from a PostgreSQL enum type (commandstatus)
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = "009"
-down_revision = "008"
+down_revision = "008_add_planned_routes"
 branch_labels = None
 depends_on = None
 

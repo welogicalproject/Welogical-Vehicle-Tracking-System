@@ -27,14 +27,6 @@ API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")
 SEND_INTERVAL_SECONDS = float(os.environ.get("SEND_INTERVAL_SECONDS", "10"))
 RUN_FOREVER = os.environ.get("RUN_FOREVER", "True").lower() in ("true", "1", "yes")
 
-# Base vehicle profiles for registration (no waypoints/route coordinates)
-DEFAULT_VEHICLES = [
-    {"device_uid": "VTS-001", "vehicle_name": "Surat Express", "vehicle_type": "Truck"},
-    {"device_uid": "VTS-002", "vehicle_name": "Ahmedabad Shuttle", "vehicle_type": "Bus"},
-    {"device_uid": "VTS-003", "vehicle_name": "Vadodara Cargo", "vehicle_type": "Truck"},
-    {"device_uid": "VTS-004", "vehicle_name": "Valsad Courier", "vehicle_type": "Car"},
-    {"device_uid": "VTS-005", "vehicle_name": "Rajkot Logistics", "vehicle_type": "Van"},
-]
 
 
 # --- GEOGRAPHIC MATH HELPERS ---
@@ -97,40 +89,29 @@ def api_request(path, method="GET", data=None):
         return 0, {"error": str(e)}
 
 
-# --- REGISTER DEFAULT VEHICLES ---
-def register_vehicles():
-    """Query vehicles and register missing default profiles."""
-    print("[INFO] Checking vehicle registration on backend...")
+# --- DISCOVER VEHICLES DYNAMICALLY ---
+def sync_vehicles():
+    print("[SYNC] Fetching vehicles...\n")
     status_code, response = api_request("/vehicles", "GET")
     
-    uid_to_id = {}
-    existing_uids = set()
+    vehicles = []
     if status_code == 200 and isinstance(response, list):
         for v in response:
-            existing_uids.add(v.get("device_uid"))
-            uid_to_id[v.get("device_uid")] = v.get("id")
-    else:
-        print(f"[WARN] Failed to list existing vehicles (status: {status_code}). Proceeding anyway.")
-        
-    for v_meta in DEFAULT_VEHICLES:
-        uid = v_meta["device_uid"]
-        if uid not in existing_uids:
-            print(f"[REGISTER] Registering default profile: {uid} ({v_meta['vehicle_name']})")
-            reg_payload = {
+            if v.get("status") == "Archived":
+                continue
+            uid = v.get("device_uid")
+            db_id = v.get("id")
+            print(f"[FOUND] {uid} (ID:{db_id})\n")
+            vehicles.append({
                 "device_uid": uid,
-                "vehicle_name": v_meta["vehicle_name"],
-                "vehicle_type": v_meta["vehicle_type"]
-            }
-            status_reg, response_reg = api_request("/vehicles", "POST", reg_payload)
-            if status_reg == 201:
-                print(f"[OK] Registered vehicle {uid} successfully.")
-                uid_to_id[uid] = response_reg.get("id")
-            else:
-                print(f"[ERROR] Failed to register vehicle {uid} (status: {status_reg}).")
-        else:
-            print(f"[EXISTS] Vehicle {uid} is already registered (ID: {uid_to_id[uid]}).")
-            
-    return uid_to_id
+                "id": db_id,
+                "vehicle_name": v.get("vehicle_name", ""),
+                "vehicle_type": v.get("vehicle_type", "")
+            })
+    else:
+        print(f"[WARN] Failed to fetch vehicles from backend (status: {status_code}).")
+        
+    return vehicles
 
 
 # --- SIMULATOR CONTROLLER ---
@@ -311,17 +292,16 @@ def main():
     print(f"Mode: Backend Managed Routes (Continuous Listening)")
     print("=" * 60)
     
-    # 1. Register default vehicles and build uid-to-id map
-    uid_to_id = register_vehicles()
+    # 1. Sync vehicles dynamically from backend
+    vehicles = sync_vehicles()
+    print(f"[READY] Loaded {len(vehicles)} simulator vehicles.\n")
     
     # 2. Instantiate vehicles simulation state
     simulated_vehicles = []
-    for meta in DEFAULT_VEHICLES:
-        uid = meta["device_uid"]
-        db_id = uid_to_id.get(uid)
+    for meta in vehicles:
         state = VehicleState(
-            device_uid=uid,
-            db_id=db_id,
+            device_uid=meta["device_uid"],
+            db_id=meta["id"],
             vehicle_name=meta["vehicle_name"],
             vehicle_type=meta["vehicle_type"]
         )

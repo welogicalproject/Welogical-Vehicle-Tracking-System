@@ -166,13 +166,19 @@ class VehicleState:
             self.route_id = route_id
             self.route_status = status_str
             self.path = [(pt["latitude"], pt["longitude"]) for pt in sorted_points]
-            self.current_index = 0
+            
+            backend_index = response.get("current_point_index", 0)
+            if backend_index and backend_index < len(self.path):
+                self.current_index = backend_index
+            else:
+                self.current_index = 0
+
             if self.path:
-                self.last_coord = self.path[0]
+                self.last_coord = self.path[self.current_index]
             
             print(f"[ROUTE] Loaded route {self.route_id}")
             print(f"[ROUTE] {len(self.path)} coordinates received")
-            print(f"[ROUTE] Starting execution")
+            print(f"[ROUTE] Resuming from point {self.current_index}")
             
             # If the route status is Assigned or Pending, transition it to Running
             if self.route_status in ["Assigned", "Pending"]:
@@ -231,9 +237,19 @@ class VehicleState:
         satellites = random.randint(9, 15)
         ign = 1 if self.speed > 0 or self.current_index < len(self.path) - 1 else 0
 
+        # Calculate route progress percentage
+        progress_pct = 0.0
+        if len(self.path) > 1:
+            progress_pct = (self.current_index / (len(self.path) - 1)) * 100.0
+
         # Construct VTS telemetry schema packet
         packet = {
             "uid": self.device_uid,
+            "route_progress": {
+                "current_point_index": self.current_index,
+                "progress_percentage": float(round(progress_pct, 2)),
+                "last_coordinate_index": len(self.path)
+            },
             "info": {
                 "dt": int(time.time()),
                 "txn": "E" if self.speed > 0 else "A",

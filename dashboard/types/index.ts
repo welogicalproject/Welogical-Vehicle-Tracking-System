@@ -292,4 +292,7 @@ export interface PlannedRoute {
   created_at: string;
   updated_at: string;
   points: PlannedRoutePoint[];
+  current_point_index?: number;
+  progress_percentage?: number;
+  last_coordinate_index?: number;
 }

@@ -101,23 +101,12 @@ export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTa
 
   // Calculate closest coordinate index to current vehicle position
   const getProgress = () => {
-    if (!activeRoute || !currentLocation || activeRoute.points.length === 0) {
+    if (!activeRoute || activeRoute.points.length === 0) {
       return { index: 0, percent: 0 };
     }
-    let minDistance = Infinity;
-    let closestIndex = 0;
-    activeRoute.points.forEach((pt, i) => {
-      const dLat = pt.latitude - currentLocation.latitude;
-      const dLng = pt.longitude - currentLocation.longitude;
-      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestIndex = i;
-      }
-    });
-    const total = activeRoute.points.length;
-    const percent = total > 1 ? Math.round((closestIndex / (total - 1)) * 100) : 100;
-    return { index: closestIndex, percent };
+    const index = activeRoute.current_point_index ?? 0;
+    const percent = activeRoute.progress_percentage !== undefined ? Math.round(activeRoute.progress_percentage) : 0;
+    return { index, percent };
   };
 
   const progress = getProgress();

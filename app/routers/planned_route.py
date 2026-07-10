@@ -88,3 +88,38 @@ async def patch_planned_route_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+from app.schemas.planned_route import RouteProgressUpdate
+from app.models.planned_route import VehicleRouteAssignment
+from datetime import datetime, timezone
+
+@router.patch("/vehicles/{vehicle_id}/route-progress", response_model=VehicleRouteAssignmentResponse)
+async def patch_vehicle_route_progress(
+    vehicle_id: int,
+    payload: RouteProgressUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update progress tracking fields on the active route assignment for a vehicle."""
+    from sqlalchemy import select
+    stmt = (
+        select(VehicleRouteAssignment)
+        .where(VehicleRouteAssignment.vehicle_id == vehicle_id, VehicleRouteAssignment.is_active == True)
+    )
+    result = await db.execute(stmt)
+    assignment = result.scalars().first()
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active route assignment found for vehicle ID {vehicle_id}"
+        )
+    
+    assignment.current_point_index = payload.current_point_index
+    assignment.progress_percentage = payload.progress_percentage
+    assignment.last_coordinate_index = payload.last_coordinate_index
+    assignment.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    
+    await db.commit()
+    await db.refresh(assignment)
+    return assignment
+

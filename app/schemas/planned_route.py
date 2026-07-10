@@ -38,6 +38,9 @@ class PlannedRouteResponse(PlannedRouteBase):
     created_at: datetime
     updated_at: datetime
     points: List[PlannedRoutePointResponse]
+    current_point_index: Optional[int] = 0
+    progress_percentage: Optional[float] = 0.0
+    last_coordinate_index: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,8 +58,19 @@ class VehicleRouteAssignmentResponse(VehicleRouteAssignmentBase):
     id: int
     assigned_at: datetime
     is_active: bool
+    current_point_index: int
+    progress_percentage: float
+    last_coordinate_index: int
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RouteProgressUpdate(BaseModel):
+    current_point_index: int
+    progress_percentage: float
+    last_coordinate_index: int
+
 
 
 class PlannedRouteStatusUpdate(BaseModel):

@@ -163,6 +163,22 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
             logger.error(f"Trip Engine failed inside background job for vehicle={vehicle.id}: {e}", exc_info=True)
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "TRIP_ENGINE", start_time, "FAILED", exception=e)
 
+        # 5.5 Update Route Progress if included in packet
+        route_progress = packet_dict.get("route_progress")
+        if route_progress:
+            from app.models.planned_route import VehicleRouteAssignment
+            stmt = (
+                select(VehicleRouteAssignment)
+                .where(VehicleRouteAssignment.vehicle_id == vehicle.id, VehicleRouteAssignment.is_active == True)
+            )
+            res = await db.execute(stmt)
+            assignment = res.scalars().first()
+            if assignment:
+                assignment.current_point_index = route_progress.get("current_point_index", assignment.current_point_index)
+                assignment.progress_percentage = route_progress.get("progress_percentage", assignment.progress_percentage)
+                assignment.last_coordinate_index = route_progress.get("last_coordinate_index", assignment.last_coordinate_index)
+                assignment.updated_at = datetime.utcnow()
+
         # 6. Commit single consolidated transaction scope
         await db.commit()
         log_telemetry_stage(

@@ -101,7 +101,12 @@ async def get_assigned_route(db: AsyncSession, vehicle_id: int) -> Optional[Plan
         return None
 
     # Retrieve the full route details
-    return await get_route(db, assignment.route_id)
+    route = await get_route(db, assignment.route_id)
+    if route:
+        route.current_point_index = assignment.current_point_index
+        route.progress_percentage = assignment.progress_percentage
+        route.last_coordinate_index = assignment.last_coordinate_index
+    return route
 
 
 async def update_route_status(db: AsyncSession, route_id: int, status: str) -> PlannedRoute:

@@ -1,8 +1,11 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { VehicleTrackingSnapshot } from "../../types";
 import { Button } from "../ui/button";
 import { Loader2, Navigation, MapPin, CheckCircle2 } from "lucide-react";
 import { api } from "../../lib/api";
+import { useGoogleMapsLoader } from "../map/hooks/useGoogleMapsLoader";
 
 interface SnapSummary {
   distance_meters: number;
@@ -15,7 +18,7 @@ interface TripPlannerPanelProps {
   selectedVehicleId: number | "all";
   snapshots: VehicleTrackingSnapshot[];
   onRoutePlanned: (summary: SnapSummary | null) => void;
-  onRouteSaved?: () => void; // called after successful POST /routes so parent can refresh
+  onRouteSaved?: () => void;
 }
 
 export function TripPlannerPanel({
@@ -32,6 +35,10 @@ export function TripPlannerPanel({
   const [error, setError] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Coords resolved states for button enabling/disabling
+  const [startResolved, setStartResolved] = useState(false);
+  const [destResolved, setDestResolved] = useState(false);
+
   const [summary, setSummary] = useState<SnapSummary | null>(null);
 
   const startAutocompleteRef = useRef<any>(null);
@@ -45,8 +52,12 @@ export function TripPlannerPanel({
   const activeSnap = selectedVehicleId !== "all" ? snapshots.find((s) => s.vehicle.id === selectedVehicleId) : null;
   const currentLoc = activeSnap?.latest_location;
 
-  // Initialize Google Places Autocomplete
+  // Use the central loader to listen to loaded status changes
+  const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
+
+  // Initialize Google Places Autocomplete when Maps SDK is loaded
   useEffect(() => {
+    if (!mapsLoaded) return;
     if (typeof window === "undefined" || !window.google || !window.google.maps || !window.google.maps.places) {
       return;
     }
@@ -64,8 +75,10 @@ export function TripPlannerPanel({
             lng: place.geometry.location.lng(),
           };
           setStartLocation(place.formatted_address || "");
+          setStartResolved(true);
         } else {
           startCoords.current = null;
+          setStartResolved(false);
         }
       });
     }
@@ -83,18 +96,21 @@ export function TripPlannerPanel({
             lng: place.geometry.location.lng(),
           };
           setDestination(place.formatted_address || "");
+          setDestResolved(true);
         } else {
           destCoords.current = null;
+          setDestResolved(false);
         }
       });
     }
-  }, []);
+  }, [mapsLoaded]);
 
   const handleUseVehicleLocation = () => {
     if (currentLoc) {
       startCoords.current = { lat: currentLoc.latitude, lng: currentLoc.longitude };
       const text = `${currentLoc.latitude.toFixed(5)}, ${currentLoc.longitude.toFixed(5)}`;
       setStartLocation(text);
+      setStartResolved(true);
       if (startInputRef.current) {
         startInputRef.current.value = text;
       }
@@ -102,11 +118,11 @@ export function TripPlannerPanel({
   };
 
   const handlePlanRoute = async () => {
-    if (!startCoords.current) {
+    if (!startCoords.current || !startResolved) {
       setError("Please select a valid start location.");
       return;
     }
-    if (!destCoords.current) {
+    if (!destCoords.current || !destResolved) {
       setError("Please select a valid destination.");
       return;
     }
@@ -160,8 +176,7 @@ export function TripPlannerPanel({
       });
 
       setSavedSuccess(true);
-      onRouteSaved?.(); // notify parent to refresh route list
-      // Reset form after short delay so user sees success banner
+      onRouteSaved?.();
       setTimeout(() => {
         handleClear();
       }, 2000);
@@ -180,6 +195,8 @@ export function TripPlannerPanel({
     if (destInputRef.current) destInputRef.current.value = "";
     startCoords.current = null;
     destCoords.current = null;
+    setStartResolved(false);
+    setDestResolved(false);
     setSummary(null);
     setError(null);
     setSavedSuccess(false);
@@ -229,7 +246,11 @@ export function TripPlannerPanel({
             className="w-full bg-[#0b0f19] border border-slate-700 rounded p-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             placeholder="Search for start location..."
             defaultValue={startLocation}
-            onChange={(e) => setStartLocation(e.target.value)}
+            onChange={(e) => {
+              setStartLocation(e.target.value);
+              startCoords.current = null;
+              setStartResolved(false);
+            }}
           />
         </div>
 
@@ -244,7 +265,11 @@ export function TripPlannerPanel({
             className="w-full bg-[#0b0f19] border border-slate-700 rounded p-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             placeholder="Search for destination..."
             defaultValue={destination}
-            onChange={(e) => setDestination(e.target.value)}
+            onChange={(e) => {
+              setDestination(e.target.value);
+              destCoords.current = null;
+              setDestResolved(false);
+            }}
           />
         </div>
       </div>
@@ -297,7 +322,7 @@ export function TripPlannerPanel({
         <div className="flex gap-2">
           <Button
             onClick={handlePlanRoute}
-            disabled={loading || !startLocation || !destination}
+            disabled={loading || !startResolved || !destResolved}
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Navigation className="h-4 w-4 mr-2" />}

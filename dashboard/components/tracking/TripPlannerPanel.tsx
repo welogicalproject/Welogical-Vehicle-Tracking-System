@@ -151,18 +151,24 @@ export function TripPlannerPanel({
   };
 
   const handleSaveRoute = async () => {
+    console.log("handleSaveRoute clicked! summary:", summary, "routeName:", routeName);
     if (!routeName.trim()) {
       setError("Please enter a route name.");
+      console.log("Exiting handleSaveRoute: routeName is empty");
       return;
     }
-    if (!summary) return;
+    if (!summary) {
+      console.log("Exiting handleSaveRoute: summary is empty");
+      return;
+    }
 
     setSaving(true);
     setError(null);
     setSavedSuccess(false);
 
     try {
-      await api.createPlannedRoute({
+      console.log("Mapping points from summary.coordinates...");
+      const payload = {
         name: routeName.trim(),
         start_location: startLocation || "Custom Start",
         destination: destination || "Custom End",
@@ -173,7 +179,10 @@ export function TripPlannerPanel({
           latitude: c.lat,
           longitude: c.lng,
         })),
-      });
+      };
+      console.log("Calling api.createPlannedRoute with payload:", payload);
+      const res = await api.createPlannedRoute(payload);
+      console.log("api.createPlannedRoute response:", res);
 
       setSavedSuccess(true);
       onRouteSaved?.();
@@ -181,6 +190,7 @@ export function TripPlannerPanel({
         handleClear();
       }, 2000);
     } catch (err: any) {
+      console.error("Error inside handleSaveRoute catch block:", err);
       setError(err.message || "Failed to save route. Check API status.");
     } finally {
       setSaving(false);

@@ -1,7 +1,10 @@
 import os
 
 # API configuration
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+API_BASE_URL = os.environ.get(
+    "API_BASE_URL",
+    "https://welogical-vehicle-tracking-system.onrender.com"
+).rstrip("/")
 
 # Intervals configuration
 TELEMETRY_INTERVAL = float(os.environ.get("TELEMETRY_INTERVAL", "10"))

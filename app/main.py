@@ -17,6 +17,7 @@ from app.routers import (
     device_command_router,
     trip_router,
     driver_router,
+    route_router,
     analytics_router,
     operations_router,
     reports_router,

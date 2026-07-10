@@ -305,9 +305,15 @@ def main():
             vehicle_name=meta["vehicle_name"],
             vehicle_type=meta["vehicle_type"]
         )
+        # Set is_connected = true, status = Online on startup
+        api_request(f"/vehicles/{state.db_id}/connect", "POST")
         # Attempt to load route immediately
         state.query_assigned_route()
         simulated_vehicles.append(state)
+    
+    # Save a reference globally so the exit handler can disconnect them
+    global active_simulated_vehicles
+    active_simulated_vehicles = simulated_vehicles
     
     print("\n[LOOP] Starting telemetry transmission loop. Press Ctrl+C to terminate.\n")
     
@@ -362,9 +368,15 @@ def main():
         time.sleep(SEND_INTERVAL_SECONDS)
 
 
+active_simulated_vehicles = []
+
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n[STOP] Telemetry Simulator stopped by user.")
+        print("\n[STOP] Telemetry Simulator stopped by user. Disconnecting vehicles...")
+        for vehicle in active_simulated_vehicles:
+            if vehicle.db_id:
+                api_request(f"/vehicles/{vehicle.db_id}/disconnect", "POST")
+        print("[STOP] Disconnected successfully. Exiting.")
         sys.exit(0)

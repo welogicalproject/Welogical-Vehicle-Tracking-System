@@ -43,24 +43,36 @@ async def get_vehicles(db: AsyncSession, skip: int = 0, limit: int = 100) -> Lis
     return list(result.scalars().all())
 
 
-def _vehicle_health(last_seen: Optional[datetime]) -> str:
-    if not last_seen:
+def _vehicle_health(vehicle: Vehicle) -> str:
+    if not vehicle.is_connected:
+        return "Offline"
+    if not vehicle.last_seen:
         return "Offline"
 
-    normalized_last_seen = last_seen
+    normalized_last_seen = vehicle.last_seen
     if normalized_last_seen.tzinfo is not None:
         normalized_last_seen = normalized_last_seen.astimezone(timezone.utc).replace(tzinfo=None)
 
-    age_minutes = (datetime.now(timezone.utc).replace(tzinfo=None) - normalized_last_seen).total_seconds() / 60
-    if age_minutes < 2:
-        return "Healthy"
-    if age_minutes <= 5:
-        return "Warning"
-    return "Offline"
+    age_seconds = (datetime.now(timezone.utc).replace(tzinfo=None) - normalized_last_seen).total_seconds()
+    if age_seconds > 30:
+        return "Offline"
+    return "Healthy"
 
 
-def _movement_status(location: Optional[Location]) -> str:
+def _movement_status(vehicle: Vehicle, location: Optional[Location]) -> str:
+    if not vehicle.is_connected:
+        return "Offline"
     if not location:
+        return "Offline"
+    if not vehicle.last_seen:
+        return "Offline"
+
+    normalized_last_seen = vehicle.last_seen
+    if normalized_last_seen.tzinfo is not None:
+        normalized_last_seen = normalized_last_seen.astimezone(timezone.utc).replace(tzinfo=None)
+
+    age_seconds = (datetime.now(timezone.utc).replace(tzinfo=None) - normalized_last_seen).total_seconds()
+    if age_seconds > 30:
         return "Offline"
     return "Moving" if location.speed > 0.1 else "Stopped"
 
@@ -163,8 +175,8 @@ async def get_tracking_snapshots(
             latest_event=latest_events.get(vehicle.id),
             latest_command=latest_commands.get(vehicle.id),
             device_config=configs.get(vehicle.id),
-            health_status=_vehicle_health(vehicle.last_seen),
-            movement_status=_movement_status(latest_locations.get(vehicle.id)),
+            health_status=_vehicle_health(vehicle),
+            movement_status=_movement_status(vehicle, latest_locations.get(vehicle.id)),
             packet_count=packet_counts.get(vehicle.id, 0),
             current_driver=vehicle.current_driver
         )

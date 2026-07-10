@@ -63,7 +63,9 @@ export function VehicleDetailsPanel({
                 <span className="text-[10px] text-slate-500 font-mono block truncate">UID: {selectedSnapshot.vehicle.device_uid}</span>
               </div>
               <div className="ml-auto">
-                {selectedSnapshot.movement_status === "Moving" ? (
+                {selectedSnapshot.vehicle.is_connected === false || selectedSnapshot.movement_status === "Offline" ? (
+                  <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Offline</span>
+                ) : selectedSnapshot.movement_status === "Moving" ? (
                   <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase animate-pulse">Moving</span>
                 ) : (
                   <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Stopped</span>

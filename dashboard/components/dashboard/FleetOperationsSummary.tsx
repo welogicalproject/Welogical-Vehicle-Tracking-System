@@ -57,7 +57,7 @@ export function FleetOperationsSummary({ vehicles, snapshots }: FleetOperationsS
           <TableBody>
             {vehicles.slice(0, 10).map((v) => {
               const snapshot = snapshots.find((s) => s.vehicle.id === v.id);
-              const status = getStatus(v.last_seen);
+              const status = getStatus(v.last_seen, v.is_connected);
               
               // 1. Resolve State
               let opState = "Offline";

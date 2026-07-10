@@ -99,7 +99,7 @@ export default function OverviewPage() {
     let gpsLost = 0;
 
     vehicles.forEach(v => {
-      const status = getStatus(v.last_seen);
+      const status = getStatus(v.last_seen, v.is_connected);
       const snapshot = trackingSnapshots.find(s => s.vehicle.id === v.id);
 
       if (status === "offline") {

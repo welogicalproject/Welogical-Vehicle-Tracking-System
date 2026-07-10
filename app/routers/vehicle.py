@@ -108,3 +108,25 @@ async def get_active_driver_assignment(vehicle_id: int, db: AsyncSession = Depen
 async def get_driver_assignment_history(vehicle_id: int, db: AsyncSession = Depends(get_db)):
     """Get all historical driver assignments for the vehicle."""
     return await crud_driver.get_assignment_history_by_vehicle(db, vehicle_id)
+
+
+@router.post("/{vehicle_id}/connect", response_model=VehicleResponse)
+async def connect_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+    """Connect a vehicle (sets status="Online")."""
+    db_vehicle = await crud_vehicle.get_vehicle(db, vehicle_id)
+    db_vehicle.status = "Online"
+    db_vehicle.last_seen = datetime.now()
+    await db.commit()
+    await db.refresh(db_vehicle)
+    return db_vehicle
+
+
+@router.post("/{vehicle_id}/disconnect", response_model=VehicleResponse)
+async def disconnect_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db)):
+    """Disconnect a vehicle (sets status="Offline")."""
+    db_vehicle = await crud_vehicle.get_vehicle(db, vehicle_id)
+    db_vehicle.status = "Offline"
+    await db.commit()
+    await db.refresh(db_vehicle)
+    return db_vehicle
+

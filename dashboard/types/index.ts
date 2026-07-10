@@ -7,6 +7,7 @@ export interface Vehicle {
   last_seen: string | null;
 
   // Extended Metadata
+  is_connected?: boolean;
   vehicle_number?: string | null;
   manufacturer?: string | null;
   model?: string | null;

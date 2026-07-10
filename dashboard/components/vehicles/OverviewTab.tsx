@@ -45,7 +45,8 @@ function gpsStatus(snapshot: VehicleTrackingSnapshot | null) {
   return "N/A";
 }
 
-function getStatus(lastSeen: string | null): "online" | "idle" | "offline" {
+function getStatus(lastSeen: string | null, isConnected?: boolean): "online" | "idle" | "offline" {
+  if (isConnected === false) return "offline";
   if (!lastSeen) return "offline";
   const lastSeenStr = lastSeen.endsWith("Z") ? lastSeen : `${lastSeen}Z`;
   const lastSeenDate = new Date(lastSeenStr);
@@ -300,7 +301,7 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
   const totalTrips = trips.length;
   const totalDistance = trips.reduce((sum, t) => sum + (t.distance || 0), 0);
   const lastTrip = trips.length > 0 ? trips[0] : null;
-  const connectionStatus = getStatus(snapshot.vehicle.last_seen);
+  const connectionStatus = getStatus(snapshot.vehicle.last_seen, snapshot.vehicle.is_connected);
 
   return (
     <div className="space-y-6">

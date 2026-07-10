@@ -22,7 +22,8 @@ import Link from "next/link";
 import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/date";
 
-function getStatus(lastSeen: string | null): "online" | "idle" | "offline" {
+function getStatus(lastSeen: string | null, isConnected?: boolean): "online" | "idle" | "offline" {
+  if (isConnected === false) return "offline";
   if (!lastSeen) return "offline";
   const lastSeenStr = lastSeen.endsWith("Z") ? lastSeen : `${lastSeen}Z`;
   const lastSeenDate = new Date(lastSeenStr);
@@ -287,7 +288,7 @@ export default function VehiclesPage() {
             </TableHeader>
             <TableBody>
               {filteredVehicles.map((v) => {
-                const telemetryStatus = getStatus(v.last_seen);
+                const telemetryStatus = getStatus(v.last_seen, v.is_connected);
                 return (
                   <TableRow key={v.id} className="border-[#1e294b]/20 hover:bg-[#131a2d]/20 transition-colors">
                     <TableCell className="font-bold text-white text-sm py-4 text-left">

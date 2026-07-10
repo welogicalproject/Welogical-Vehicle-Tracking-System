@@ -56,6 +56,7 @@ class VehicleResponse(VehicleBase):
     id: int
     created_at: datetime
     last_seen: Optional[datetime] = None
+    is_connected: bool = False
     current_driver: Optional[DriverResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

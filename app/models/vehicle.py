@@ -36,6 +36,10 @@ class Vehicle(Base):
     assignments = relationship("DriverAssignment", back_populates="vehicle", cascade="all, delete-orphan")
 
     @property
+    def is_connected(self) -> bool:
+        return self.status in ["Online", "Moving", "Idle"]
+
+    @property
     def current_driver(self):
         for asg in self.assignments:
             if asg.status == "Active":

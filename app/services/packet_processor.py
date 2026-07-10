@@ -107,6 +107,7 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
 
         if not db_last_seen or ctx.timestamp > db_last_seen:
             vehicle.last_seen = ctx.timestamp
+            vehicle.status = "Moving" if packet.gps.speed > 0.1 else "Idle"
             log_telemetry_stage(ctx.device_uid, ctx.vehicle_id, ctx.msgid, "UPDATE_LAST_SEEN", start_time, "SUCCESS")
 
         # 4. Decode Warning & Critical events (Legacy decoder and new transition-based EventEngine)

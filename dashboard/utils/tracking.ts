@@ -57,7 +57,8 @@ export function getPacketVal(snapshot: VehicleTrackingSnapshot | undefined, path
   return current;
 }
 
-export function getStatus(lastSeen: string | null | undefined): "online" | "idle" | "offline" {
+export function getStatus(lastSeen: string | null | undefined, isConnected?: boolean): "online" | "idle" | "offline" {
+  if (isConnected === false) return "offline";
   if (!lastSeen) return "offline";
   const cleanSeen = lastSeen.endsWith("Z") ? lastSeen : `${lastSeen}Z`;
   const now = Date.now();
@@ -149,7 +150,7 @@ export function getOdometerKm(snapshot: VehicleTrackingSnapshot | undefined) {
 
 export function getNetworkStatus(snapshot: VehicleTrackingSnapshot | undefined) {
   if (!snapshot) return "N/A";
-  const status = getStatus(snapshot.vehicle.last_seen);
+  const status = getStatus(snapshot.vehicle.last_seen, snapshot.vehicle.is_connected);
   return status === "online" ? "Good (4G)" : status === "idle" ? "Idle (3G)" : "Offline";
 }
 

@@ -184,7 +184,9 @@ class VehicleState:
             if self.path:
                 self.last_coord = self.path[0]
             
-            print(f"[ROUTE] [{self.device_uid}] Loaded assigned route '{response.get('name')}' (ID: {self.route_id}) with {len(self.path)} coordinates. Status: {self.route_status}")
+            print(f"[ROUTE] Loaded route {self.route_id}")
+            print(f"[ROUTE] {len(self.path)} coordinates received")
+            print(f"[ROUTE] Starting execution")
             
             # If the route status is Assigned or Pending, transition it to Running
             if self.route_status in ["Assigned", "Pending"]:
@@ -282,6 +284,9 @@ class VehicleState:
             }
         }
         
+        # Print progression log
+        print(f"[GPS] Point {self.current_index + 1}/{len(self.path)}")
+
         self.msg_id += 1
         self.last_coord = curr_coord
         
@@ -290,7 +295,7 @@ class VehicleState:
         if self.current_index >= len(self.path):
             # Route completed!
             self.route_status = "Completed"
-            print(f"[COMPLETE] [{self.device_uid}] Reached destination. Transitioning route ID {self.route_id} to Completed.")
+            print(f"[ROUTE] Completed")
             # Report Completion status to the backend
             api_request(f"/routes/{self.route_id}/status", "PATCH", {"status": "Completed"})
 

@@ -370,7 +370,7 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
                 <Button size="sm" variant="outline" onClick={openAssignModal} className="h-7 text-[10px] px-2 border-[#1e294b] text-slate-300 hover:text-white">
                   Change
                 </Button>
-                <Button size="sm" variant="destructive" onClick={handleRemoveDriver} className="h-7 text-[10px] px-2 bg-red-950 hover:bg-red-900 border-red-800 text-red-300">
+                <Button size="sm" variant="danger" onClick={handleRemoveDriver} className="h-7 text-[10px] px-2 bg-red-950 hover:bg-red-900 border-red-800 text-red-300">
                   Remove
                 </Button>
               </div>
@@ -517,7 +517,7 @@ export function OverviewTab({ snapshot, vehicleId, onAssignmentChange, trips }: 
             </Button>
 
             <Button 
-              variant="destructive"
+              variant="danger"
               onClick={handleArchiveVehicle} 
               className="w-full text-xs font-bold py-2 justify-start gap-2 bg-red-950/80 hover:bg-red-900 border border-red-800/40 text-red-300"
             >

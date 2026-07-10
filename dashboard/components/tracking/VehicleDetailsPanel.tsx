@@ -7,12 +7,8 @@ import { MetricRow } from "../shared/MetricRow";
 import { TrackingDetailTab } from "../../hooks/useVehicleSelection";
 import { VehicleTrackingSnapshot } from "../../types";
 import { cn } from "../../lib/utils";
-<<<<<<< HEAD
 import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal, getFuelLevel } from "../../utils/tracking";
-=======
-import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal } from "../../utils/tracking";
 import { VehicleRoutesTab } from "./VehicleRoutesTab";
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 interface VehicleDetailsPanelProps {
   selectedVehicleId: number | "all";

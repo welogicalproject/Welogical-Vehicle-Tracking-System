@@ -2,11 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { VehicleTrackingSnapshot } from "../../types";
 import { Button } from "../ui/button";
 import { Loader2, Navigation, MapPin } from "lucide-react";
-<<<<<<< HEAD
-import { api } from "../../lib/api";
-
-=======
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 interface PlannedRouteSummary {
   distance_meters: number;
@@ -26,25 +21,15 @@ export function TripPlannerPanel({
   snapshots,
   onRoutePlanned,
 }: TripPlannerPanelProps) {
-<<<<<<< HEAD
-  const [destination, setDestination] = useState("");
-  const [loading, setLoading] = useState(false);
-=======
   const [routeName, setRouteName] = useState("");
   const [startLocation, setStartLocation] = useState("");
   const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
   const [error, setError] = useState<string | null>(null);
   
   const [summary, setSummary] = useState<PlannedRouteSummary | null>(null);
 
-<<<<<<< HEAD
-  const autocompleteRef = useRef<any>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const destinationCoords = useRef<{ lat: number; lng: number } | null>(null);
-=======
   const startAutocompleteRef = useRef<any>(null);
   const startInputRef = useRef<HTMLInputElement>(null);
   const startCoords = useRef<{ lat: number; lng: number } | null>(null);
@@ -55,7 +40,6 @@ export function TripPlannerPanel({
 
   const activeSnap = selectedVehicleId !== "all" ? snapshots.find((s) => s.vehicle.id === selectedVehicleId) : null;
   const currentLoc = activeSnap?.latest_location;
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
   // Initialize Google Places Autocomplete
   useEffect(() => {
@@ -63,17 +47,6 @@ export function TripPlannerPanel({
       return;
     }
 
-<<<<<<< HEAD
-    if (inputRef.current && !autocompleteRef.current) {
-      autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
-        fields: ["geometry", "formatted_address"],
-      });
-
-      autocompleteRef.current.addListener("place_changed", () => {
-        const place = autocompleteRef.current.getPlace();
-        if (place.geometry && place.geometry.location) {
-          destinationCoords.current = {
-=======
     if (startInputRef.current && !startAutocompleteRef.current) {
       startAutocompleteRef.current = new window.google.maps.places.Autocomplete(startInputRef.current, {
         fields: ["geometry", "formatted_address"],
@@ -102,38 +75,17 @@ export function TripPlannerPanel({
         const place = destAutocompleteRef.current.getPlace();
         if (place.geometry && place.geometry.location) {
           destCoords.current = {
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
           };
           setDestination(place.formatted_address || "");
         } else {
-<<<<<<< HEAD
-          destinationCoords.current = null;
-=======
           destCoords.current = null;
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         }
       });
     }
   }, []);
 
-<<<<<<< HEAD
-  if (selectedVehicleId === "all") {
-    return null;
-  }
-
-  const activeSnap = snapshots.find((s) => s.vehicle.id === selectedVehicleId);
-  const currentLoc = activeSnap?.latest_location;
-
-  const handlePlanRoute = async () => {
-    if (!currentLoc) {
-      setError("Current vehicle location is unknown.");
-      return;
-    }
-    if (!destinationCoords.current) {
-      setError("Please select a valid destination from the dropdown.");
-=======
   const handleUseVehicleLocation = () => {
     if (currentLoc) {
       startCoords.current = { lat: currentLoc.latitude, lng: currentLoc.longitude };
@@ -152,7 +104,6 @@ export function TripPlannerPanel({
     }
     if (!destCoords.current) {
       setError("Please select a valid destination.");
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
       return;
     }
 
@@ -161,17 +112,6 @@ export function TripPlannerPanel({
     setSummary(null);
 
     try {
-<<<<<<< HEAD
-      const data = await api.snapPath([
-        [currentLoc.latitude, currentLoc.longitude],
-        [destinationCoords.current.lat, destinationCoords.current.lng],
-      ], "DRIVE");
-
-      setSummary(data);
-      onRoutePlanned(data);
-    } catch (err: any) {
-
-=======
       const response = await fetch("http://localhost:8000/routes/snap-path", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,7 +132,6 @@ export function TripPlannerPanel({
       setSummary(data);
       onRoutePlanned(data);
     } catch (err: any) {
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
       setError(err.message || "An error occurred while planning the route.");
       onRoutePlanned(null);
     } finally {
@@ -200,12 +139,6 @@ export function TripPlannerPanel({
     }
   };
 
-<<<<<<< HEAD
-  const handleClear = () => {
-    setDestination("");
-    if (inputRef.current) inputRef.current.value = "";
-    destinationCoords.current = null;
-=======
   const handleSaveRoute = async () => {
     if (!routeName.trim()) {
       setError("Please enter a route name.");
@@ -255,7 +188,6 @@ export function TripPlannerPanel({
     if (destInputRef.current) destInputRef.current.value = "";
     startCoords.current = null;
     destCoords.current = null;
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
     setSummary(null);
     setError(null);
     onRoutePlanned(null);
@@ -269,22 +201,6 @@ export function TripPlannerPanel({
       </div>
 
       <div className="space-y-3">
-<<<<<<< HEAD
-        {/* Current Location (Read Only) */}
-        <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-            Current Location
-          </label>
-          <div className="flex items-center gap-2 bg-[#0b0f19] border border-slate-800 rounded p-2 text-sm text-slate-300">
-            <MapPin className="h-4 w-4 text-emerald-400" />
-            {currentLoc
-              ? `${currentLoc.latitude.toFixed(5)}, ${currentLoc.longitude.toFixed(5)}`
-              : "Unknown"}
-          </div>
-        </div>
-
-        {/* Destination (Google Places) */}
-=======
         {/* Route Name */}
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
@@ -325,23 +241,15 @@ export function TripPlannerPanel({
         </div>
 
         {/* Destination */}
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         <div>
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
             Destination
           </label>
           <input
-<<<<<<< HEAD
-            ref={inputRef}
-            type="text"
-            className="w-full bg-[#0b0f19] border border-slate-700 rounded p-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-            placeholder="Search for a destination..."
-=======
             ref={destInputRef}
             type="text"
             className="w-full bg-[#0b0f19] border border-slate-700 rounded p-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             placeholder="Search for destination..."
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             defaultValue={destination}
             onChange={(e) => setDestination(e.target.value)}
           />
@@ -378,55 +286,6 @@ export function TripPlannerPanel({
               })}
             </span>
           </div>
-<<<<<<< HEAD
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-slate-400">Route Type</span>
-            <span className="text-indigo-400 font-semibold text-xs uppercase tracking-wide">
-              Fastest
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-2 pt-2">
-        <Button
-          onClick={handlePlanRoute}
-          disabled={loading || !currentLoc || !destination}
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Navigation className="h-4 w-4 mr-2" />}
-          Plan Route
-        </Button>
-        {summary && (
-          <Button
-            onClick={async () => {
-              if (!activeSnap) return;
-              setLoading(true);
-              setError(null);
-              try {
-                // Map coordinates {lat, lng} array back to [lat, lng] array
-                const coordsArray = summary.coordinates.map((c) => [c.lat, c.lng] as [number, number]);
-                await api.updateTwinRoute(activeSnap.vehicle.device_uid, coordsArray);
-                alert(`Trip assigned! Vehicle ${activeSnap.vehicle.vehicle_name} is now moving along your planned route.`);
-              } catch (err: any) {
-                setError(err.message || "Failed to start the trip on the simulator.");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            Start Trip
-          </Button>
-        )}
-        {summary && (
-          <Button
-            onClick={handleClear}
-            variant="outline"
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            Clear
-=======
         </div>
       )}
 
@@ -458,7 +317,6 @@ export function TripPlannerPanel({
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MapPin className="h-4 w-4 mr-2" />}
             Save & Publish Planned Route
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           </Button>
         )}
       </div>

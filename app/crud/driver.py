@@ -49,12 +49,7 @@ async def create_driver(db: AsyncSession, driver_in: DriverCreate) -> Driver:
     )
     db.add(db_driver)
     await db.commit()
-<<<<<<< HEAD
     return await get_driver(db, db_driver.id)
-=======
-    await db.refresh(db_driver)
-    return db_driver
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 
 async def update_driver(db: AsyncSession, driver_id: int, driver_in: DriverUpdate) -> Driver:
@@ -65,13 +60,7 @@ async def update_driver(db: AsyncSession, driver_id: int, driver_in: DriverUpdat
             value = value.replace(tzinfo=None)
         setattr(db_driver, field, value)
     await db.commit()
-<<<<<<< HEAD
     return await get_driver(db, db_driver.id)
-
-=======
-    await db.refresh(db_driver)
-    return db_driver
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 async def delete_driver(db: AsyncSession, driver_id: int) -> Driver:
     db_driver = await get_driver(db, driver_id)
@@ -136,19 +125,11 @@ async def create_assignment(db: AsyncSession, vehicle_id: int, driver_id: int) -
     )
     db.add(db_assignment)
     await db.commit()
-<<<<<<< HEAD
     # Eager load the driver details to prevent DetachedInstanceError on serialization
     return await get_active_assignment_by_vehicle(db, vehicle_id)
 
 async def release_assignment(db: AsyncSession, vehicle_id: int) -> Optional[DriverAssignment]:
     stmt = select(DriverAssignment).options(selectinload(DriverAssignment.driver)).where(
-=======
-    await db.refresh(db_assignment)
-    return db_assignment
-
-async def release_assignment(db: AsyncSession, vehicle_id: int) -> Optional[DriverAssignment]:
-    stmt = select(DriverAssignment).where(
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         and_(
             DriverAssignment.vehicle_id == vehicle_id,
             DriverAssignment.status == "Active"
@@ -160,10 +141,7 @@ async def release_assignment(db: AsyncSession, vehicle_id: int) -> Optional[Driv
         active_asg.status = "Completed"
         active_asg.released_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.commit()
-<<<<<<< HEAD
-=======
-        await db.refresh(active_asg)
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
+
     return active_asg
 
 async def get_active_assignment_by_vehicle(db: AsyncSession, vehicle_id: int) -> Optional[DriverAssignment]:
@@ -177,11 +155,7 @@ async def get_active_assignment_by_vehicle(db: AsyncSession, vehicle_id: int) ->
     return res.scalars().first()
 
 async def get_active_assignment_by_driver(db: AsyncSession, driver_id: int) -> Optional[DriverAssignment]:
-<<<<<<< HEAD
     stmt = select(DriverAssignment).options(selectinload(DriverAssignment.driver)).where(
-=======
-    stmt = select(DriverAssignment).where(
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         and_(
             DriverAssignment.driver_id == driver_id,
             DriverAssignment.status == "Active"
@@ -198,16 +172,9 @@ async def get_assignment_history_by_vehicle(db: AsyncSession, vehicle_id: int) -
     return list(res.scalars().all())
 
 async def get_assignment_history_by_driver(db: AsyncSession, driver_id: int) -> List[DriverAssignment]:
-<<<<<<< HEAD
     stmt = select(DriverAssignment).options(selectinload(DriverAssignment.driver)).where(
-=======
-    stmt = select(DriverAssignment).where(
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
         DriverAssignment.driver_id == driver_id
     ).order_by(DriverAssignment.assigned_at.desc())
     res = await db.execute(stmt)
     return list(res.scalars().all())
-<<<<<<< HEAD
 
-=======
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)

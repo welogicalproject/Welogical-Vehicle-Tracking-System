@@ -7,16 +7,13 @@ from app.routers.device_command import router as device_command_router
 from app.routers.trip import router as trip_router
 from app.routers.driver import router as driver_router
 from app.routers.route import router as route_router
-<<<<<<< HEAD
 from app.routers.analytics import router as analytics_router
 from app.routers.operations import router as operations_router
 from app.routers.reports import router as reports_router
 from app.routers.notifications import router as notifications_router
 from app.routers.websocket import router as websocket_router
 from app.routers.simulator import router as simulator_router
-=======
 from app.routers.planned_route import router as planned_route_router
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
 __all__ = [
     "health_router",
@@ -29,14 +26,11 @@ __all__ = [
     "trip_router",
     "driver_router",
     "route_router",
-<<<<<<< HEAD
     "analytics_router",
     "operations_router",
     "reports_router",
     "notifications_router",
     "websocket_router",
     "simulator_router",
-=======
     "planned_route_router",
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 ]

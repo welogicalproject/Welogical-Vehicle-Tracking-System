@@ -72,15 +72,8 @@ async def get_tracking_snapshots(
     end_time: Optional[datetime] = None,
     limit_per_vehicle: int = 500
 ) -> List[VehicleTrackingSnapshot]:
-<<<<<<< HEAD
     start_time = normalize_datetime(start_time)
     end_time = normalize_datetime(end_time)
-=======
-    if start_time and start_time.tzinfo is not None:
-        start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
-    if end_time and end_time.tzinfo is not None:
-        end_time = end_time.astimezone(timezone.utc).replace(tzinfo=None)
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 
     vehicle_query = (
         select(Vehicle)
@@ -229,10 +222,4 @@ async def delete_vehicle(db: AsyncSession, vehicle_id: int) -> Vehicle:
     # Perform soft delete by archiving vehicle
     db_vehicle.status = "Archived"
     await db.commit()
-<<<<<<< HEAD
     return await get_vehicle(db, db_vehicle.id)
-
-=======
-    await db.refresh(db_vehicle)
-    return db_vehicle
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)

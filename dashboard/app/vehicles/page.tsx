@@ -225,11 +225,7 @@ export default function VehiclesPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-<<<<<<< HEAD
             className="w-full sm:w-auto bg-[#0b0f19] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all"
-=======
-            className="bg-[#0b0f19] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all"
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           >
             <option value="all">All Vehicle Types</option>
             {vehicleTypes.map((type) => (
@@ -241,11 +237,7 @@ export default function VehiclesPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-<<<<<<< HEAD
             className="w-full sm:w-auto bg-[#0b0f19] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all"
-=======
-            className="bg-[#0b0f19] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all"
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           >
             <option value="all">All Lifecycles</option>
             <option value="Enabled">Enabled Only</option>
@@ -253,17 +245,10 @@ export default function VehiclesPage() {
           </select>
         </div>
 
-<<<<<<< HEAD
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <button
             onClick={openAddModal}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all"
-=======
-        <div className="flex items-center gap-3">
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all"
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           >
             <Plus className="h-4 w-4" />
             Add Vehicle
@@ -272,11 +257,7 @@ export default function VehiclesPage() {
           <button
             onClick={() => loadData(true)}
             disabled={refreshing}
-<<<<<<< HEAD
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all"
-=======
-            className="flex items-center gap-2 bg-[#131a2d] hover:bg-[#1e294b] border border-[#1e294b] text-slate-200 font-semibold text-xs px-3.5 py-2 rounded-lg transition-all"
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           >
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing ? "animate-spin" : "")} />
             Refresh List
@@ -416,11 +397,7 @@ export default function VehiclesPage() {
             </div>
             
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-left">
-<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-=======
-              <div className="grid grid-cols-2 gap-4">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Vehicle Name *</label>
                   <Input value={vehicleName} onChange={(e) => setVehicleName(e.target.value)} required placeholder="e.g. Surat Express" className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -431,11 +408,7 @@ export default function VehiclesPage() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-=======
-              <div className="grid grid-cols-3 gap-4">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Vehicle Type</label>
                   <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="w-full bg-[#131a2d] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all h-9">
@@ -459,11 +432,7 @@ export default function VehiclesPage() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-=======
-              <div className="grid grid-cols-3 gap-4">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</label>
                   <Input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} placeholder="Tata, Mahindra..." className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -478,11 +447,7 @@ export default function VehiclesPage() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-=======
-              <div className="grid grid-cols-3 gap-4">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">VIN</label>
                   <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder="Chassis number..." className="bg-[#131a2d] border-[#1e294b] text-xs h-9" />
@@ -497,11 +462,7 @@ export default function VehiclesPage() {
                 </div>
               </div>
 
-<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-=======
-              <div className="grid grid-cols-2 gap-4">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Fuel Type</label>
                   <select value={fuelType} onChange={(e) => setFuelType(e.target.value)} className="w-full bg-[#131a2d] border border-[#1e294b] rounded-lg px-3 py-1.5 text-xs text-slate-300 font-semibold focus:outline-none transition-all h-9">

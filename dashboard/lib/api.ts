@@ -211,7 +211,6 @@ export const api = {
   getCommandLogs: (commandId: number): Promise<CommandLog[]> =>
     request<CommandLog[]>(`/commands/${commandId}/logs`),
 
-<<<<<<< HEAD
   // Quick-action commands
   restartDevice: (vehicleId: number): Promise<{ status: string; command_id: number }> =>
     request<{ status: string; command_id: number }>(`/vehicles/${vehicleId}/restart`, { method: "POST" }),
@@ -221,10 +220,6 @@ export const api = {
 
   restoreVehicle: (vehicleId: number): Promise<{ status: string; command_id: number }> =>
     request<{ status: string; command_id: number }>(`/vehicles/${vehicleId}/restore`, { method: "POST" }),
-
-
-=======
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
   // Trips & Replay Analytics
   getVehicleTrips: (
     vehicleId: number,
@@ -306,8 +301,6 @@ export const api = {
 
   getDriverAssignmentHistory: (driverId: number): Promise<DriverAssignment[]> =>
     request<DriverAssignment[]>(`/drivers/${driverId}/assignments/history`),
-<<<<<<< HEAD
-
   // Routes Ingestion / Snapping
   snapPath: (waypoints: [number, number][], travelMode = "DRIVE"): Promise<any> =>
     request<any>("/routes/snap-path", {
@@ -320,7 +313,5 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ device_uid: deviceUid, coordinates }),
     }),
-=======
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
 };
 

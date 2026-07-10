@@ -121,11 +121,7 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
       altitude: 0,
       timestamp: currentPoint.timestamp,
       extra_data: {
-<<<<<<< HEAD
-        gps: {
-=======
         gps_details: {
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           dir: currentPoint.heading,
         },
         io: {
@@ -180,13 +176,8 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
   return (
     <div className="space-y-4 text-left">
       {/* Map Layers Toggles */}
-<<<<<<< HEAD
       <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between bg-slate-900/60 border border-[#1e294b]/60 rounded-xl p-3 shrink-0">
         <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
-=======
-      <div className="flex items-center justify-between bg-slate-900/60 border border-[#1e294b]/60 rounded-xl p-3 shrink-0">
-        <div className="flex items-center gap-6">
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Map Layers</span>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer select-none">
@@ -260,11 +251,7 @@ export function TripReplay({ trip, points, loading, vehicle }: TripReplayProps) 
             snapshots={snapshots}
             selectedVehicleId={trip.vehicle_id}
             visibleVehicleIds={[trip.vehicle_id]}
-<<<<<<< HEAD
             heightClass="h-[250px] sm:h-[400px]"
-=======
-            heightClass="h-[400px]"
->>>>>>> 57e7858 (Refactor VTS architecture and standalone simulator)
             isMiniMap={true}
             googleRoutePolyline={googleRoute?.encoded_polyline}
             showGoogleRoute={showGoogleRoute && googleRoute?.status === "success"}

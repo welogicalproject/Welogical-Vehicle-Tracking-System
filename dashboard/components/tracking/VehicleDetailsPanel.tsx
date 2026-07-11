@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Battery, Car, Clock, Database, Gauge, Globe, MapPin, Navigation, Route, Satellite, Send, Sliders, SlidersHorizontal, Users, X, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Battery, Car, Clock, Database, Gauge, Globe, MapPin, Navigation, Route, Satellite, Send, Sliders, SlidersHorizontal, Users, X, Zap, Signal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { MetricRow } from "../shared/MetricRow";
 import { TrackingDetailTab } from "../../hooks/useVehicleSelection";
-import { VehicleTrackingSnapshot } from "../../types";
+import { VehicleTrackingSnapshot, PlannedRoute } from "../../types";
 import { cn } from "../../lib/utils";
 import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal, getFuelLevel } from "../../utils/tracking";
 import { VehicleRoutesTab } from "./VehicleRoutesTab";
+import { api } from "../../lib/api";
 
 interface VehicleDetailsPanelProps {
   selectedVehicleId: number | "all";
@@ -32,6 +34,44 @@ export function VehicleDetailsPanel({
   onDetailTabChange,
   onSelectVehicle,
 }: VehicleDetailsPanelProps) {
+  const [activeRoute, setActiveRoute] = useState<PlannedRoute | null>(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+
+  useEffect(() => {
+    if (selectedVehicleId === "all" || !selectedSnapshot) {
+      setActiveRoute(null);
+      return;
+    }
+    
+    let isCurrent = true;
+    const fetchActive = async () => {
+      setLoadingRoute(true);
+      try {
+        const route = await api.getAssignedRoute(selectedSnapshot.vehicle.id);
+        if (isCurrent) {
+          setActiveRoute(route);
+        }
+      } catch (err) {
+        console.error("Failed to load active route for details panel:", err);
+        if (isCurrent) {
+          setActiveRoute(null);
+        }
+      } finally {
+        if (isCurrent) {
+          setLoadingRoute(false);
+        }
+      }
+    };
+
+    fetchActive();
+    const interval = setInterval(fetchActive, 5000);
+
+    return () => {
+      isCurrent = false;
+      clearInterval(interval);
+    };
+  }, [selectedVehicleId, selectedSnapshot]);
+
   return (
     <Card className="border-[#1e294b]/60 bg-[#131a2d]/40 rounded-xl overflow-hidden">
       <CardHeader className="border-b border-[#1e294b]/60 bg-[#0f172a]/20 p-4 flex flex-row items-center justify-between">
@@ -92,19 +132,102 @@ export function VehicleDetailsPanel({
 
             <div className="space-y-2 pt-2 text-left">
               {detailTab === "live" && (
-                <div className="space-y-2">
-                  <MetricRow label="Location" val={selectedSnapshot.latest_location ? `${selectedSnapshot.latest_location.latitude.toFixed(4)}° N, ${selectedSnapshot.latest_location.longitude.toFixed(4)}° E` : "N/A"} icon={<MapPin className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Speed" val={selectedSnapshot.latest_location ? `${selectedSnapshot.latest_location.speed.toFixed(1)} km/h` : "N/A"} icon={<Gauge className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Heading" val={getHeadingText(selectedSnapshot)} icon={<Navigation className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Last Update" val={getLastUpdateText(selectedSnapshot)} icon={<Clock className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Ignition" val={<IgnitionBadge snapshot={selectedSnapshot} />} icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="GPS Status" val={getGPSFixText(selectedSnapshot)} icon={<Satellite className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Battery Voltage" val={getBatteryVolt(selectedSnapshot)} icon={<Battery className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Main Voltage" val={getMainVolt(selectedSnapshot)} icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Network" val={getNetworkStatus(selectedSnapshot)} icon={<Globe className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Odometer" val={getOdometerKm(selectedSnapshot)} icon={<Route className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Fuel Level" val={getFuelLevel(selectedSnapshot)} icon={<SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />} />
-                  <MetricRow label="Driver" val="N/A" icon={<Users className="h-3.5 w-3.5 text-cyan-400" />} />
+                <div className="space-y-4">
+                  {/* Status & Signal Quality Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-[#0b0f19]/30 border border-[#1e294b]/50 rounded-xl flex flex-col text-left">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status</span>
+                      <span className="text-sm font-extrabold text-white mt-1 uppercase flex items-center gap-1.5">
+                        <span className={cn(
+                          "h-2 w-2 rounded-full",
+                          selectedSnapshot.movement_status === "Moving"
+                            ? "bg-blue-400 animate-pulse"
+                            : selectedSnapshot.movement_status === "Stopped"
+                            ? "bg-yellow-400"
+                            : selectedSnapshot.movement_status === "Offline"
+                            ? "bg-red-400"
+                            : "bg-emerald-400"
+                        )} />
+                        {selectedSnapshot.movement_status === "Moving" ? "Moving" : selectedSnapshot.movement_status === "Stopped" ? "Idle" : "Offline"}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-[#0b0f19]/30 border border-[#1e294b]/50 rounded-xl flex flex-col text-left">
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Signal Quality</span>
+                      <span className="text-sm font-extrabold text-cyan-400 mt-1 flex items-center gap-1.5">
+                        <Signal className="h-4 w-4 text-cyan-400" />
+                        Excellent (5/5)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Core Telemetry Info */}
+                  <div className="space-y-2.5">
+                    <MetricRow label="Coordinates" val={selectedSnapshot.latest_location ? `${selectedSnapshot.latest_location.latitude.toFixed(6)}° N, ${selectedSnapshot.latest_location.longitude.toFixed(6)}° E` : "N/A"} icon={<MapPin className="h-3.5 w-3.5 text-cyan-400" />} />
+                    <MetricRow label="Current Speed" val={selectedSnapshot.latest_location ? `${selectedSnapshot.latest_location.speed.toFixed(1)} km/h` : "N/A"} icon={<Gauge className="h-3.5 w-3.5 text-cyan-400" />} />
+                    <MetricRow label="Heading" val={getHeadingText(selectedSnapshot)} icon={<Navigation className="h-3.5 w-3.5 text-cyan-400" />} />
+                    <MetricRow label="Last Seen" val={getLastUpdateText(selectedSnapshot)} icon={<Clock className="h-3.5 w-3.5 text-cyan-400" />} />
+                    <MetricRow label="Odometer" val={getOdometerKm(selectedSnapshot)} icon={<Route className="h-3.5 w-3.5 text-cyan-400" />} />
+                  </div>
+
+                  {/* Active Route Progress details card */}
+                  <div className="p-4 bg-[#0b0f19]/50 border border-[#1e294b]/60 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Assigned Route Plan</span>
+                      {activeRoute && (
+                        <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase">
+                          {activeRoute.status}
+                        </span>
+                      )}
+                    </div>
+                    {activeRoute ? (
+                      <div className="space-y-3 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-white text-[13px]">{activeRoute.name}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {Math.round(activeRoute.progress_percentage || 0)}% Completed
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-[#0b0f19] rounded-full h-1.5 overflow-hidden border border-[#1e294b]/60">
+                          <div
+                            className="bg-cyan-500 h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${activeRoute.progress_percentage || 0}%` }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                          <div>
+                            <span className="text-slate-500 block">Distance Remaining</span>
+                            <span className="font-bold text-slate-200">
+                              {((activeRoute.distance || 0) * (1 - (activeRoute.progress_percentage || 0) / 100) / 1000).toFixed(2)} km
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 block">Waypoint Progress</span>
+                            <span className="font-bold text-slate-200 font-mono">
+                              {activeRoute.current_point_index || 0} / {activeRoute.points?.length || 0}
+                            </span>
+                          </div>
+                          <div className="col-span-2 pt-1 border-t border-[#1e294b]/30">
+                            <span className="text-slate-500 block">Estimated Arrival (ETA)</span>
+                            <span className="font-bold text-slate-200">
+                              {activeRoute.progress_percentage && activeRoute.progress_percentage >= 100
+                                ? "Arrived"
+                                : selectedSnapshot.latest_location && selectedSnapshot.latest_location.speed > 1
+                                ? `${(((activeRoute.distance || 0) * (1 - (activeRoute.progress_percentage || 0) / 100) / 1000) / (selectedSnapshot.latest_location.speed)).toFixed(1)} hours remaining`
+                                : "Calculating..."}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-slate-400 text-xs py-2 text-center">
+                        No route currently assigned. Go to the "Routes" tab to assign a route.
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

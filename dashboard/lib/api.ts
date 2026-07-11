@@ -346,5 +346,9 @@ export const api = {
       if (err.message.includes("404") || err.message.toLowerCase().includes("not found")) return null;
       throw err;
     }),
+  devReset: (): Promise<any> =>
+    request<any>("/health/dev-reset", {
+      method: "POST"
+    }),
 };
 

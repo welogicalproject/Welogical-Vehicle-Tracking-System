@@ -77,8 +77,35 @@ class VehicleTwin:
         self._pipeline_latency_samples: List[float] = []  # ms, rolling window 50
         self._db_latency_samples: List[float] = []        # ms, rolling window 50
 
-        # Resolve path: use supplied path or fall back to interpolated template
-        if path and len(path) > 1:
+        # Resolve path: first check for active DB assigned route if db_vehicle_id is provided
+        assigned_path = None
+        start_index = 0
+        if db_vehicle_id is not None:
+            try:
+                from app.database import SessionLocal
+                from app.models.planned_route import VehicleRouteAssignment, PlannedRoutePoint
+                from sqlalchemy import select
+                with SessionLocal() as session:
+                    stmt = select(VehicleRouteAssignment).where(
+                        VehicleRouteAssignment.vehicle_id == db_vehicle_id,
+                        VehicleRouteAssignment.is_active == True
+                    )
+                    asg = session.execute(stmt).scalars().first()
+                    if asg:
+                        stmt_pts = select(PlannedRoutePoint).where(
+                            PlannedRoutePoint.route_id == asg.route_id
+                        ).order_by(PlannedRoutePoint.sequence_number.asc())
+                        pts = session.execute(stmt_pts).scalars().all()
+                        if pts:
+                            assigned_path = [(pt.latitude, pt.longitude) for pt in pts]
+                            start_index = asg.current_point_index or 0
+                            logger.info(f"[Bootstrap] Loaded active assigned route for {device_uid} (route_id={asg.route_id}, {len(assigned_path)} points, starting at index {start_index})")
+            except Exception as e:
+                logger.error(f"[Bootstrap] Failed to load active assigned route for twin {device_uid}: {e}")
+
+        if assigned_path:
+            self.path = assigned_path
+        elif path and len(path) > 1:
             self.path = path
         else:
             waypoints = TEMPLATE_ROUTES[index % len(TEMPLATE_ROUTES)]
@@ -124,7 +151,13 @@ class VehicleTwin:
         start_offset = 0.0
         forward_dir = True
         
-        if last_latitude is not None and last_longitude is not None:
+        if assigned_path:
+            # Resume exactly from assigned route index
+            start_offset = self.distances[start_index] if start_index < len(self.distances) else 0.0
+            start_pt = self.path[start_index] if start_index < len(self.path) else self.path[0]
+            forward_dir = True
+            logger.info(f"[Persistence] Resumed twin {device_uid} from assigned route waypoint index {start_index}")
+        elif last_latitude is not None and last_longitude is not None:
             # Snap to closest point on self.path to determine offset
             min_dist = float("inf")
             closest_idx = 0
@@ -196,6 +229,7 @@ class VehicleTwin:
         self._task = asyncio.create_task(self._run_loop())
         logger.info(f"Twin started successfully.")
         logger.info(f"Started VehicleTwin {self.device_uid} (db_id={self.db_vehicle_id})")
+        await self.update_db_status("Online")
 
     async def stop(self) -> None:
         if not self.is_running:
@@ -209,6 +243,98 @@ class VehicleTwin:
                 pass
             self._task = None
         logger.info(f"VehicleTwin {self.device_uid} stopped")
+        await self.update_db_status("Offline")
+
+    async def update_db_status(self, status: str) -> None:
+        """Update vehicle status in database and broadcast websocket event."""
+        if self.db_vehicle_id is None:
+            return
+        try:
+            from app.database import AsyncSessionLocal
+            from app.models.vehicle import Vehicle
+            from sqlalchemy import select
+            from app.services.websocket_manager import ws_manager
+
+            async with AsyncSessionLocal() as session:
+                stmt = select(Vehicle).where(Vehicle.id == self.db_vehicle_id)
+                res = await session.execute(stmt)
+                veh = res.scalars().first()
+                if veh:
+                    veh.status = status
+                    veh.last_seen = datetime.utcnow()
+                    await session.commit()
+
+                    # Broadcast vehicle status change
+                    await ws_manager.broadcast("vehicles", {
+                        "event": "status_change",
+                        "vehicle_id": self.db_vehicle_id,
+                        "device_uid": self.device_uid,
+                        "status": status,
+                        "last_seen": veh.last_seen.isoformat()
+                    })
+        except Exception as e:
+            logger.error(f"Failed to update db status for vehicle {self.device_uid}: {e}")
+
+    async def load_assigned_route(self) -> None:
+        """Fetch active route assignment from database and update path, index, and state."""
+        if self.db_vehicle_id is None:
+            return
+        
+        from app.database import AsyncSessionLocal
+        from app.models.planned_route import VehicleRouteAssignment, PlannedRoutePoint
+        from sqlalchemy import select
+
+        try:
+            async with AsyncSessionLocal() as session:
+                stmt = select(VehicleRouteAssignment).where(
+                    VehicleRouteAssignment.vehicle_id == self.db_vehicle_id,
+                    VehicleRouteAssignment.is_active == True
+                )
+                res = await session.execute(stmt)
+                asg = res.scalars().first()
+                if asg:
+                    stmt_pts = select(PlannedRoutePoint).where(
+                        PlannedRoutePoint.route_id == asg.route_id
+                    ).order_by(PlannedRoutePoint.sequence_number.asc())
+                    res_pts = await session.execute(stmt_pts)
+                    pts = list(res_pts.scalars().all())
+                    if pts:
+                        route_coords = [(pt.latitude, pt.longitude) for pt in pts]
+                        
+                        # Update paths and distances
+                        self.path = route_coords
+                        self.distances = [0.0]
+                        for i in range(1, len(self.path)):
+                            prev = self.path[i - 1]
+                            curr = self.path[i]
+                            dist_seg = haversine_distance(prev[0], prev[1], curr[0], curr[1])
+                            self.distances.append(self.distances[-1] + dist_seg)
+                        self.total_path_distance = self.distances[-1]
+                        
+                        # Reset motion systems with new path
+                        self.motion_sys.waypoints = self.path
+                        self.motion_sys.distances = self.distances
+                        self.motion_sys.total_path_distance = self.total_path_distance
+                        
+                        # Set starting position/index
+                        start_idx = asg.current_point_index or 0
+                        if start_idx >= len(self.path):
+                            start_idx = 0
+                        
+                        self.motion_sys.current_distance_offset = self.distances[start_idx]
+                        self.motion_sys.forward = True
+                        self.motion_sys.completed = False
+                        
+                        self.gps_sys.latitude = self.path[start_idx][0]
+                        self.gps_sys.longitude = self.path[start_idx][1]
+                        self.gps_sys.last_coord = self.path[start_idx]
+                        self.gps_sys.heading = 0.0
+                        self.gps_sys.current_waypoint_idx = start_idx
+                        self.completed = False
+                        
+                        logger.info(f"VehicleTwin {self.device_uid} successfully loaded assigned route of {len(self.path)} points starting at index {start_idx}")
+        except Exception as e:
+            logger.error(f"Failed to load assigned route for twin {self.device_uid}: {e}")
 
     def set_custom_route(self, route_coords: List[Tuple[float, float]]):
         """Dynamically override the current route path and reset motion/GPS state."""
@@ -288,6 +414,18 @@ class VehicleTwin:
             runtime=self.runtime_sys,
             alt_base=self.alt_base
         )
+        # Inject route progress metrics
+        total_dist = self.total_path_distance
+        offset = self.motion_sys.current_distance_offset
+        progress_pct = (offset / total_dist * 100.0) if total_dist > 0 else 0.0
+        progress_pct = max(0.0, min(100.0, progress_pct))
+
+        packet["route_progress"] = {
+            "current_point_index": getattr(self.gps_sys, "current_waypoint_idx", 0),
+            "progress_percentage": progress_pct,
+            "last_coordinate_index": max(0, len(self.path) - 1)
+        }
+
         self.latest_packet = packet
         self.msg_id += 1
         return packet

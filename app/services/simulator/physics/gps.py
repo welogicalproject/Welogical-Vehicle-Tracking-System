@@ -10,6 +10,7 @@ class GPSSystem:
         self.satellites = 12
         self.fix = "A"
         self.last_coord = start_coord
+        self.current_waypoint_idx = 0
 
     def update(self, speed, motion, send_interval):
         travelled = 0.0
@@ -53,6 +54,7 @@ class GPSSystem:
         idx = 0
         while idx < len(motion.distances) - 2 and motion.distances[idx+1] < motion.current_distance_offset:
             idx += 1
+        self.current_waypoint_idx = idx
             
         d1 = motion.distances[idx]
         d2 = motion.distances[idx+1]

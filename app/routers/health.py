@@ -104,3 +104,67 @@ async def get_system_stats(db: AsyncSession = Depends(get_db)):
             "vehicles_offline": 0,
             "latest_timestamp": None
         }
+
+
+@router.post("/dev-reset", status_code=status.HTTP_200_OK)
+async def dev_reset(db: AsyncSession = Depends(get_db)):
+    """
+    Reset database utility (Development mode only).
+    Clears all application data while preserving schema and migrations.
+    Resets identity sequences.
+    """
+    from app.config import settings
+    from fastapi import HTTPException
+
+    if settings.APP_ENV != "development":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Reset utility is only available in development mode."
+        )
+
+    # Stop simulator twins before resetting database
+    try:
+        from app.services.simulator.simulator_service import simulator_service
+        await simulator_service.stop()
+        # Clear twin instances
+        simulator_service.twins.clear()
+    except Exception as sim_err:
+        logger.error(f"Failed to stop simulator twins during dev reset: {sim_err}")
+
+    tables = [
+        "locations",
+        "vehicle_route_assignments",
+        "planned_route_points",
+        "planned_routes",
+        "events",
+        "trips",
+        "driver_assignments",
+        "command_logs",
+        "device_commands",
+        "device_configs",
+        "notification_histories",
+        "vehicle_operations",
+        "vehicle_daily_summaries",
+        "maintenance_summaries",
+        "raw_packets",
+        "analytics_checkpoints",
+        "fleet_operations_live",
+        "google_route_usage_events",
+        "trip_route_cache_links",
+        "route_cache",
+        "vehicles"
+    ]
+
+    try:
+        # Run truncate queries sequentially with CASCADE and RESTART IDENTITY
+        for table in tables:
+            await db.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE;"))
+        await db.commit()
+        return {"status": "success", "message": "Database reset completed successfully."}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Database reset failed: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database reset failed: {str(e)}"
+        )

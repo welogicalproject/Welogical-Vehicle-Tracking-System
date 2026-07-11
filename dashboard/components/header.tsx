@@ -1,10 +1,28 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, User, Menu } from "lucide-react";
+import { useState } from "react";
+import { Bell, User, Menu, Database, Loader2 } from "lucide-react";
+import { api } from "../lib/api";
 
 export function Header() {
   const pathname = usePathname();
+  const [resetting, setResetting] = useState(false);
+
+  const handleDevReset = async () => {
+    if (!confirm("Are you sure you want to reset the database? This will clear all application data (vehicles, locations, routes, assignments, events) while preserving migrations.")) return;
+    setResetting(true);
+    try {
+      await api.devReset();
+      alert("Database reset completed successfully! You can now start the demo workflow.");
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to reset database. Make sure app is in development mode.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Resolve page title based on path
   const getPageTitle = () => {
@@ -43,7 +61,22 @@ export function Header() {
       </div>
 
       {/* Notifications & Admin Profile */}
-      <div className="flex items-center gap-3 md:gap-6 shrink-0">
+      <div className="flex items-center gap-3 md:gap-4 shrink-0">
+        {/* Dev Reset Button */}
+        <button
+          onClick={handleDevReset}
+          disabled={resetting}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-500 rounded-lg transition-all"
+          title="Development DB Reset"
+        >
+          {resetting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Database className="h-4 w-4" />
+          )}
+          <span>Reset DB</span>
+        </button>
+
         {/* Notification Icon */}
         <button className="relative p-2 text-slate-400 hover:text-white bg-[#131a2d]/40 hover:bg-[#1e294b]/40 border border-[#1e294b]/40 rounded-lg transition-all animate-in fade-in duration-200">
           <Bell className="h-4.5 w-4.5" />

@@ -32,24 +32,11 @@ export class PlannedRouteLayer implements IMapLayer {
     const { coordinates, visible } = payload;
 
     if (!this.polyline) {
-      // Create a dashed purple line to look distinct
-      const lineSymbol = {
-        path: "M 0,-1 0,1",
-        strokeOpacity: 1,
-        scale: 4,
-      };
-
       this.polyline = new google.maps.Polyline({
-        strokeColor: "#9333ea", // Purple
-        strokeOpacity: 0,
-        icons: [
-          {
-            icon: lineSymbol,
-            offset: "0",
-            repeat: "20px",
-          },
-        ],
-        zIndex: 100, // Make it appear above other routes
+        strokeColor: "#3b82f6", // Blue
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+        zIndex: 50, // Make it appear below markers but clearly visible
       } as any);
     }
 

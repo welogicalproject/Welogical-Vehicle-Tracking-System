@@ -70,7 +70,32 @@ async def assign_planned_route(
 ):
     """Assign a planned route to a vehicle, replacing any currently active route assignment."""
     try:
-        return await assign_route_to_vehicle(db, vehicle_id, payload.route_id)
+        assignment = await assign_route_to_vehicle(db, vehicle_id, payload.route_id)
+
+        # Notify simulator twin and broadcast WS event
+        try:
+            from app.models.vehicle import Vehicle
+            from app.services.simulator.simulator_service import simulator_service
+            from app.services.websocket_manager import ws_manager
+            from sqlalchemy import select
+
+            stmt = select(Vehicle).where(Vehicle.id == vehicle_id)
+            res = await db.execute(stmt)
+            veh = res.scalars().first()
+            if veh and veh.device_uid in simulator_service.twins:
+                twin = simulator_service.twins[veh.device_uid]
+                await twin.load_assigned_route()
+
+            # Broadcast assignment event
+            await ws_manager.broadcast("vehicles", {
+                "event": "route_assigned",
+                "vehicle_id": vehicle_id,
+                "route_id": payload.route_id
+            })
+        except Exception as sim_err:
+            pass
+
+        return assignment
     except EntityNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

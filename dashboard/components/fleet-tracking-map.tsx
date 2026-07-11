@@ -57,6 +57,12 @@ export function FleetTrackingMap({
   const [fullscreen, setFullscreen] = useState(false);
   const { isLoaded, error: loadError } = useGoogleMapsLoader();
 
+  // New interactive controls state
+  const [showPlannedRoute, setShowPlannedRoute] = useState(true);
+  const [showActualRoute, setShowActualRoute] = useState(true);
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [followVehicle, setFollowVehicle] = useState(true);
+
   // Reset the initial fit flag when the selected vehicle or the route changes
   useEffect(() => {
     if (
@@ -177,7 +183,7 @@ export function FleetTrackingMap({
 
     layerManager.refreshLayer("RouteLayer", {
       snapshots,
-      visibleIds: showGPSRoute ? visibleVehicleIds : [],
+      visibleIds: showActualRoute ? visibleVehicleIds : [],
       selectedId: selectedVehicleId,
       colorOverride: routeColor
     });
@@ -189,8 +195,14 @@ export function FleetTrackingMap({
 
     layerManager.refreshLayer("PlannedRouteLayer", {
       coordinates: plannedRoute || [],
-      visible: !!plannedRoute && plannedRoute.length > 0
+      visible: showPlannedRoute && !!plannedRoute && plannedRoute.length > 0
     });
+
+    if (showTraffic) {
+      layerManager.showLayer("TrafficLayer");
+    } else {
+      layerManager.hideLayer("TrafficLayer");
+    }
 
     // Refresh Selection Layer
     let selectedCoord = null;
@@ -239,7 +251,7 @@ export function FleetTrackingMap({
         // After initial load:
         // During replay or live tracking, if a single vehicle is selected, auto-follow it.
         // Otherwise, never move the camera.
-        if (boundsPoints.length === 1 && selectedVehicleId !== "all") {
+        if (followVehicle && boundsPoints.length === 1 && selectedVehicleId !== "all") {
           const target = boundsPoints[0];
           const last = lastPannedRef.current;
           // Only pan when the vehicle has moved more than ~0.005 deg (~500m)
@@ -300,6 +312,17 @@ export function FleetTrackingMap({
     }
   };
 
+  const fitPlannedRoute = () => {
+    if (!engine || !plannedRoute || plannedRoute.length === 0) return;
+    engine.getCameraController().fitBounds(plannedRoute);
+  };
+
+  const resetView = () => {
+    if (!engine) return;
+    engine.getCameraController().panTo({ lat: 22.3072, lng: 73.1812 });
+    engine.getCameraController().setZoom(7);
+  };
+
   const toggleFullscreen = async () => {
     const element = containerRef.current?.parentElement;
     if (!element) return;
@@ -331,6 +354,16 @@ export function FleetTrackingMap({
           onFitFleet={fitFleet}
           onZoomSelected={zoomSelected}
           onToggleFullscreen={toggleFullscreen}
+          showPlannedRoute={showPlannedRoute}
+          onTogglePlannedRoute={() => setShowPlannedRoute(!showPlannedRoute)}
+          showActualRoute={showActualRoute}
+          onToggleActualRoute={() => setShowActualRoute(!showActualRoute)}
+          showTraffic={showTraffic}
+          onToggleTraffic={() => setShowTraffic(!showTraffic)}
+          followVehicle={followVehicle}
+          onToggleFollow={() => setFollowVehicle(!followVehicle)}
+          onFitPlannedRoute={fitPlannedRoute}
+          onResetView={resetView}
         />
       )}
 

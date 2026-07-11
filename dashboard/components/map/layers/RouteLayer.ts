@@ -63,10 +63,11 @@ export class RouteLayer implements IMapLayer {
 
       polyline.setPath(path);
       polyline.setOptions({
-        strokeColor: color,
+        strokeColor: "#10b981", // Green
         strokeWeight: isFocused ? 4 : 2,
         strokeOpacity: isFocused ? 0.85 : 0.25,
-        map: isVisible ? this.map : null
+        map: isVisible ? this.map : null,
+        zIndex: 40,
       });
     });
   }

@@ -79,7 +79,8 @@ export class VehicleLayer implements IMapLayer {
       if (!marker) {
         marker = new google.maps.Marker({
           map: isVisible ? this.map : null,
-          title: snapshot.vehicle.vehicle_name
+          title: snapshot.vehicle.vehicle_name,
+          zIndex: 100
         });
 
         // Event dispatching looks up current snapshot dynamically to avoid stale closures
@@ -98,7 +99,8 @@ export class VehicleLayer implements IMapLayer {
       if (!headingMarker) {
         headingMarker = new google.maps.Marker({
           map: isVisible ? this.map : null,
-          clickable: false
+          clickable: false,
+          zIndex: 101
         });
         this.headingMarkers.set(vehicleId, headingMarker);
       }

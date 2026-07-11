@@ -14,10 +14,10 @@ interface VehicleRoutesTabProps {
 // Status badge styling
 function RoutStatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    Running: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse",
-    Completed: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    Assigned: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    Pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+    Running: "bg-purple-500/10 text-purple-400 border-purple-500/20 animate-pulse",
+    Completed: "bg-emerald-950/30 text-emerald-500 border-emerald-500/30",
+    Assigned: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    Pending: "bg-slate-500/10 text-slate-400 border-slate-500/20",
   };
   return (
     <span

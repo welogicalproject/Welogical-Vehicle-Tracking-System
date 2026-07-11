@@ -19,6 +19,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { Input } from "../../components/ui/input";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/date";
 
@@ -36,6 +37,7 @@ function getStatus(lastSeen: string | null, isConnected?: boolean): "online" | "
 }
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -153,11 +155,13 @@ export default function VehiclesPage() {
     try {
       if (editingVehicle) {
         await api.updateVehicle(editingVehicle.id, payload);
+        setIsModalOpen(false);
+        loadData(true);
       } else {
-        await api.createVehicle(payload);
+        const newVehicle = await api.createVehicle(payload);
+        setIsModalOpen(false);
+        router.push(`/tracking?selectVehicleId=${newVehicle.id}&newVehicle=true`);
       }
-      setIsModalOpen(false);
-      loadData(true);
     } catch (err: any) {
       alert(err.message || "Failed to save vehicle details.");
     }

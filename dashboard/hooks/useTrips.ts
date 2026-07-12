@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../lib/api";
 import { Trip, Vehicle } from "../types";
+import { useFleet } from "../context/FleetContext";
 
 export function useTrips(initialVehicleId: number | "all" = "all") {
+  const { vehicles } = useFleet();
   const [vehicleId, setVehicleId] = useState<number | "all">(initialVehicleId);
   const [status, setStatus] = useState<string>("all");
   const [startTime, setStartTime] = useState<string>("");
@@ -11,20 +13,9 @@ export function useTrips(initialVehicleId: number | "all" = "all") {
   const [limit, setLimit] = useState<number>(100);
 
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState<boolean>(false);
-
-  // Load vehicles list first
-  const loadVehicles = useCallback(async () => {
-    try {
-      const res = await api.getVehicles(0, 100);
-      setVehicles(res);
-    } catch (err: any) {
-      console.error("Failed to load vehicles for trip filters", err);
-    }
-  }, []);
 
   const loadTrips = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -107,10 +98,6 @@ export function useTrips(initialVehicleId: number | "all" = "all") {
       setRebuilding(false);
     }
   }, [loadTrips]);
-
-  useEffect(() => {
-    loadVehicles();
-  }, [loadVehicles]);
 
   useEffect(() => {
     loadTrips();

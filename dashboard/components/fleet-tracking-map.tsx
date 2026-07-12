@@ -28,6 +28,7 @@ interface FleetTrackingMapProps {
   showGPSRoute?: boolean;
   routeColor?: string;
   plannedRoute?: {lat: number, lng: number}[];
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
 export function FleetTrackingMap({
@@ -41,7 +42,8 @@ export function FleetTrackingMap({
   showGoogleRoute = false,
   showGPSRoute = true,
   routeColor,
-  plannedRoute
+  plannedRoute,
+  onMapClick
 }: FleetTrackingMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<any>(null);
@@ -150,13 +152,26 @@ export function FleetTrackingMap({
       );
     });
 
+    const rawMap = mapEngine.getRawMap();
+    let clickListener: any = null;
+    if (rawMap && onMapClick) {
+      clickListener = rawMap.addListener("click", (e: any) => {
+        if (e.latLng) {
+          onMapClick(e.latLng.lat(), e.latLng.lng());
+        }
+      });
+    }
+
     setEngine(mapEngine);
 
     return () => {
+      if (clickListener) {
+        google.maps.event.removeListener(clickListener);
+      }
       mapEngine.destroy();
       setEngine(null);
     };
-  }, [isLoaded, isMiniMap, onSelectVehicle]);
+  }, [isLoaded, isMiniMap, onSelectVehicle, onMapClick]);
 
   // Reset lastPannedRef whenever the user selects a different vehicle so that
   // the initial pan-to-vehicle fires correctly for the newly selected one.

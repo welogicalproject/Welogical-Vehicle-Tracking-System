@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { Vehicle, SystemStats, Event, EventStats, VehicleTrackingSnapshot } from "../types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { EventDistributionChart } from "../components/charts";
+import { useFleet } from "../context/FleetContext";
 
 // Dashboard Components
 import { DashboardRefreshToolbar } from "../components/dashboard/DashboardRefreshToolbar";
@@ -36,56 +37,27 @@ const FUEL_MOCK_DATA = [
 ];
 
 export default function OverviewPage() {
-  const [stats, setStats] = useState<SystemStats | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [eventsStats, setEventsStats] = useState<EventStats | null>(null);
-  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
-  const [trackingSnapshots, setTrackingSnapshots] = useState<VehicleTrackingSnapshot[]>([]);
+  const {
+    stats,
+    vehicles,
+    eventsStats,
+    recentEvents,
+    snapshots: trackingSnapshots,
+    loading,
+    refreshing,
+    error,
+    loadData
+  } = useFleet();
+
   const [fleetAnalytics, setFleetAnalytics] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    else setRefreshing(true);
-    try {
-      const [statsRes, vehiclesRes, evStatsRes, recentEvRes, trackingRes, fleetAnalyticsRes] = await Promise.all([
-        api.getStats().catch(() => null),
-        api.getVehicles(0, 100).catch(() => []),
-        api.getEventsStats().catch(() => null),
-        api.getRecentEvents(15).catch(() => []),
-        api.getFleetTracking(undefined, undefined, 50).catch(() => []),
-        api.getFleetAnalyticsToday().catch(() => null),
-      ]);
-
-      setStats(statsRes);
-      setVehicles(vehiclesRes);
-      setEventsStats(evStatsRes);
-      setRecentEvents(recentEvRes);
-      setTrackingSnapshots(trackingRes);
-      setFleetAnalytics(fleetAnalyticsRes);
-      setError(null);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to retrieve dashboard telemetry data.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  // Initial load and 10s auto-refresh
   useEffect(() => {
-    loadData();
-    const interval = setInterval(() => {
-      loadData(true);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+    api.getFleetAnalyticsToday().then(setFleetAnalytics).catch(console.error);
+  }, [vehicles]);
 
   const handleManualRefresh = () => {
     loadData(true);
+    api.getFleetAnalyticsToday().then(setFleetAnalytics).catch(console.error);
   };
 
   // 1. Compute dynamic Fleet Operational Status counts

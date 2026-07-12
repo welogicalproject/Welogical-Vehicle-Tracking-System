@@ -41,6 +41,17 @@ websocket_heartbeat_task = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global websocket_heartbeat_task
+    
+    import logging
+    logger = logging.getLogger("app.startup")
+    try:
+        from app.database import async_engine
+        from app.utils.migrations import verify_migrations_are_current
+        await verify_migrations_are_current(async_engine)
+    except Exception as e:
+        logger.critical(f"Database migration check failed: {e}")
+        sys.exit(1)
+
     from app.services.websocket_manager import ws_manager
     websocket_heartbeat_task = asyncio.create_task(ws_manager.run_heartbeat_loop())
     

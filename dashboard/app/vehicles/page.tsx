@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "../../lib/utils";
 import { formatDate } from "../../lib/date";
+import { useFleet } from "../../context/FleetContext";
 
 function getStatus(lastSeen: string | null, isConnected?: boolean): "online" | "idle" | "offline" {
   if (isConnected === false) return "offline";
@@ -38,10 +39,14 @@ function getStatus(lastSeen: string | null, isConnected?: boolean): "online" | "
 
 export default function VehiclesPage() {
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    vehicles,
+    loading,
+    refreshing,
+    error,
+    loadData,
+    deleteVehicleFromState
+  } = useFleet();
 
   // Search & Filter state
   const [search, setSearch] = useState("");
@@ -68,27 +73,7 @@ export default function VehiclesPage() {
   const [status, setStatus] = useState("Enabled");
   const [notes, setNotes] = useState("");
 
-  const loadData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    else setRefreshing(true);
-    try {
-      const res = await api.getVehicles(0, 100);
-      setVehicles(res);
-      setError(null);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to retrieve vehicle inventory.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(() => loadData(true), 10000);
-    return () => clearInterval(interval);
-  }, [loadData]);
 
   const openAddModal = () => {
     setEditingVehicle(null);
@@ -181,6 +166,7 @@ export default function VehiclesPage() {
     if (!confirm(`Are you sure you want to archive "${v.vehicle_name}"? This soft-deletes the vehicle from directory listings but preserves historical tracks.`)) return;
     try {
       await api.deleteVehicle(v.id);
+      deleteVehicleFromState(v.id);
       loadData(true);
     } catch (err: any) {
       alert(err.message || "Failed to archive vehicle.");

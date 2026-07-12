@@ -6,11 +6,9 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     
-    # [OPTIONAL] Pre-deployment Database Migrations Command:
-    # Uncomment the command below if you want Render to automatically run Alembic migrations 
-    # before booting the updated application. If commented out, you must apply migrations 
-    # manually or out-of-band to prevent database-lock and control migrations.
-    # preDeployCommand: alembic upgrade head
+    # Pre-deployment Database Migrations Command:
+    # Render automatically runs Alembic migrations before booting the updated application.
+    preDeployCommand: alembic upgrade head
     
     envVars:
       - key: APP_ENV

@@ -7,9 +7,17 @@ interface FleetMapProps {
   visibleVehicleIds: number[];
   onSelectVehicle: (id: number | "all") => void;
   plannedRoute?: {lat: number, lng: number}[];
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
-export function FleetMap({ snapshots, selectedVehicleId, visibleVehicleIds, onSelectVehicle, plannedRoute }: FleetMapProps) {
+export function FleetMap({
+  snapshots,
+  selectedVehicleId,
+  visibleVehicleIds,
+  onSelectVehicle,
+  plannedRoute,
+  onMapClick,
+}: FleetMapProps) {
   return (
     <FleetTrackingMap
       snapshots={snapshots}
@@ -17,6 +25,7 @@ export function FleetMap({ snapshots, selectedVehicleId, visibleVehicleIds, onSe
       visibleVehicleIds={visibleVehicleIds}
       onSelectVehicle={onSelectVehicle}
       plannedRoute={plannedRoute}
+      onMapClick={onMapClick}
     />
   );
 }

@@ -52,6 +52,8 @@ export default function TrackingPage() {
   const isNewVehicle = searchParams.get("newVehicle") === "true";
 
   const [showInitLocation, setShowInitLocation] = useState(false);
+  const [mapSelectionMode, setMapSelectionMode] = useState(false);
+  const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -116,12 +118,20 @@ export default function TrackingPage() {
       });
       await loadData(true);
       setShowInitLocation(false);
+      setMapSelectionMode(false);
+      setClickedCoords(null);
       router.push(`/tracking?selectVehicleId=${selectedVehicleId}`);
     } catch (err) {
       console.error("Failed to initialize vehicle location:", err);
       alert("Failed to initialize starting location. Please try again.");
     } finally {
       setConfirmingLocation(false);
+    }
+  };
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (mapSelectionMode) {
+      setClickedCoords({ lat, lng });
     }
   };
 
@@ -157,6 +167,7 @@ export default function TrackingPage() {
             visibleVehicleIds={visibleVehicleIds}
             onSelectVehicle={setSelectedVehicleId}
             plannedRoute={plannedRoute?.coordinates || []}
+            onMapClick={handleMapClick}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -201,35 +212,98 @@ export default function TrackingPage() {
         <SystemAlertsCard offlineCount={fleetCounts.offline} />
       </div>
 
+      {/* Interactive Click on Map banner */}
+      {mapSelectionMode && selectedSnapshot && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1000] bg-[#131a2d]/95 border border-cyan-500/50 rounded-xl px-6 py-3 shadow-2xl flex items-center gap-4 text-xs font-semibold text-white">
+          <span className="flex items-center gap-1.5 animate-pulse text-cyan-400 font-bold">
+            📍 Click anywhere on the map to set the initial location for {selectedSnapshot.vehicle.vehicle_name}
+          </span>
+          <button
+            onClick={() => {
+              setMapSelectionMode(false);
+              setShowInitLocation(true);
+            }}
+            className="bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 px-2 py-1 rounded transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation prompt for map clicked coordinate */}
+      {clickedCoords && selectedSnapshot && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#070b13]/85 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-xs bg-[#131a2d] border border-[#1e294b] rounded-2xl p-5 shadow-2xl space-y-4 text-center">
+            <h3 className="text-sm font-extrabold text-white">Confirm Starting Location</h3>
+            <p className="text-xs text-slate-400">
+              Set the starting position of <strong className="text-cyan-400">{selectedSnapshot.vehicle.vehicle_name}</strong> to:
+            </p>
+            <div className="bg-[#0b0f19] border border-[#1e294b]/60 rounded-lg p-2 font-mono text-[11px] text-slate-300">
+              {clickedCoords.lat.toFixed(6)}, {clickedCoords.lng.toFixed(6)}
+            </div>
+            <div className="flex gap-2 justify-center pt-2">
+              <button
+                onClick={() => {
+                  handleConfirmLocation(clickedCoords.lat, clickedCoords.lng);
+                }}
+                disabled={confirmingLocation}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors flex-1"
+              >
+                {confirmingLocation ? "Saving..." : "Confirm"}
+              </button>
+              <button
+                onClick={() => setClickedCoords(null)}
+                className="bg-[#1b253b] hover:bg-[#253350] text-slate-400 hover:text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors flex-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Choice Overlay Modal */}
       {showInitLocation && selectedSnapshot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070b13]/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-[#131a2d]/90 border border-[#1e294b] rounded-2xl p-6 shadow-2xl space-y-6 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#070b13]/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#131a2d] border border-[#1e294b] rounded-2xl p-6 shadow-2xl space-y-6 text-left">
             <div>
               <h3 className="text-lg font-extrabold text-white">Initialize Starting Location</h3>
               <p className="text-xs text-slate-400 mt-1">
-                Set an initial location for <span className="text-cyan-400 font-bold">{selectedSnapshot.vehicle.vehicle_name}</span> to register its marker and enable route planning.
+                Configure the starting location for <span className="text-cyan-400 font-bold">{selectedSnapshot.vehicle.vehicle_name}</span> to register its marker and allow route planning.
               </p>
             </div>
 
-            {/* Option 1 */}
-            <div className="p-4 bg-[#0b0f19]/50 border border-[#1e294b]/60 rounded-xl space-y-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">Option 1</span>
-              <h4 className="text-xs font-bold text-white">Use Default System Coordinates</h4>
-              <p className="text-[11px] text-slate-400">Places the vehicle at the VTS Central Hub (Vadodara: 22.3072, 73.1812).</p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Option 1: Click on Map */}
+              <button
+                onClick={() => {
+                  setShowInitLocation(false);
+                  setMapSelectionMode(true);
+                }}
+                className="p-4 bg-[#0b0f19]/50 hover:bg-[#1b253b]/50 border border-[#1e294b]/60 hover:border-cyan-500/50 rounded-xl space-y-2 text-left transition-all"
+              >
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400">Method 1</span>
+                <h4 className="text-xs font-bold text-white">Click on Map</h4>
+                <p className="text-[10px] text-slate-400 leading-relaxed">Select any coordinate point visually directly on the Google Map.</p>
+              </button>
+
+              {/* Option 2: Default System Hub */}
               <button
                 onClick={() => handleConfirmLocation(22.3072, 73.1812)}
                 disabled={confirmingLocation}
-                className="w-full bg-[#1b253b] hover:bg-[#253350] border border-[#1e294b] text-white font-bold text-xs py-2 rounded-lg transition-colors mt-2"
+                className="p-4 bg-[#0b0f19]/50 hover:bg-[#1b253b]/50 border border-[#1e294b]/60 hover:border-cyan-500/50 rounded-xl space-y-2 text-left transition-all disabled:opacity-40"
               >
-                {confirmingLocation ? "Setting position..." : "Set Position to Hub"}
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400">Method 2</span>
+                <h4 className="text-xs font-bold text-white">VTS Central Hub</h4>
+                <p className="text-[10px] text-slate-400 leading-relaxed">Default coordinates at system headquarters (Vadodara: 22.3072, 73.1812).</p>
               </button>
             </div>
 
-            {/* Option 2 */}
+            {/* Option 3: Address Search */}
             <div className="p-4 bg-[#0b0f19]/50 border border-[#1e294b]/60 rounded-xl space-y-3">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">Option 2</span>
-              <h4 className="text-xs font-bold text-white">Search Location</h4>
-              <p className="text-[11px] text-slate-400">Search for a starting city or address.</p>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 block">Method 3</span>
+              <h4 className="text-xs font-bold text-white">Search Address</h4>
+              <p className="text-[10px] text-slate-400">Search for a starting city or address.</p>
               <div className="flex gap-2">
                 <input
                   type="text"

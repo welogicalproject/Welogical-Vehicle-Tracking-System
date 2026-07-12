@@ -1,3 +1,4 @@
+/// <reference types="@types/google.maps" />
 "use client";
 
 // General coordinate model

@@ -1,3 +1,4 @@
+/// <reference types="@types/google.maps" />
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -152,15 +153,22 @@ export function FleetTrackingMap({
       );
     });
 
-    if (onMapClick) {
-      mapEngine.onMapClick((lat: number, lng: number) => {
-        onMapClick(lat, lng);
+    const rawMap = mapEngine.getRawMap();
+    let clickListener: google.maps.MapsEventListener | null = null;
+    if (rawMap && onMapClick) {
+      clickListener = rawMap.addListener("click", (e: google.maps.MapMouseEvent) => {
+        if (e.latLng) {
+          onMapClick(e.latLng.lat(), e.latLng.lng());
+        }
       });
     }
 
     setEngine(mapEngine);
 
     return () => {
+      if (clickListener) {
+        clickListener.remove();
+      }
       mapEngine.destroy();
       setEngine(null);
     };

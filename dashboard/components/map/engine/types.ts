@@ -66,5 +66,6 @@ export interface IMapEngine {
   getCameraController(): ICameraController;
   getOverlayManager(): IOverlayManager;
   isReady(): boolean;
+  getRawMap(): any;
   destroy(): void;
 }

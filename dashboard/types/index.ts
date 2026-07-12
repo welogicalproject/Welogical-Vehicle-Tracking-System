@@ -140,7 +140,7 @@ export interface VehicleTrackingSnapshot {
   latest_command: DeviceCommand | null;
   device_config: DeviceConfig | null;
   health_status: "Healthy" | "Warning" | "Offline";
-  movement_status: "Moving" | "Stopped" | "Offline";
+  movement_status: "Moving" | "Idle" | "Stopped" | "Offline";
   packet_count: number;
   current_driver?: Driver | null;
 }

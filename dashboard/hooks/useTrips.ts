@@ -25,7 +25,6 @@ export function useTrips(initialVehicleId: number | "all" = "all") {
       if (vehicleId === "all") {
         if (vehicles.length === 0) {
           const fetchedVehicles = await api.getVehicles(0, 100);
-          setVehicles(fetchedVehicles);
           vehiclesToQuery = fetchedVehicles;
         } else {
           vehiclesToQuery = vehicles;

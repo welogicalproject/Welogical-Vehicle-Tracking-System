@@ -8,6 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
+    "types": ["google.maps", "node"],
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,

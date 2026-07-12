@@ -107,6 +107,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
                     latitude,
                     longitude,
                     speed,
+                    altitude: extra_data?.altitude || extra_data?.gps?.alt || 0,
                     timestamp,
                     extra_data
                   };
@@ -126,7 +127,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
                       latitude,
                       longitude,
                       speed,
-                      altitude: s.latest_location?.altitude || 0,
+                      altitude: s.latest_location?.altitude || extra_data?.altitude || extra_data?.gps?.alt || 0,
                       timestamp,
                       extra_data
                     },

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Bell, User, Menu, Database, Loader2, LogOut, Settings as SettingsIcon, ShieldAlert } from "lucide-react";
 import { api } from "../lib/api";
 import { useFleet } from "../context/FleetContext";
+import { cn } from "../lib/utils";
 
 export function Header() {
   const pathname = usePathname();

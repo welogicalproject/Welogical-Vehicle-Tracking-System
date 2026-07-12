@@ -67,5 +67,6 @@ export interface IMapEngine {
   getOverlayManager(): IOverlayManager;
   isReady(): boolean;
   onMapClick(callback: (lat: number, lng: number) => void): void;
+  getRawMap(): google.maps.Map | null;
   destroy(): void;
 }

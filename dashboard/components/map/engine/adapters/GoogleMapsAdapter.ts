@@ -96,7 +96,7 @@ export class GoogleMapsAdapter implements IMapEngine {
   }
 
   // Helper to fetch raw map object within adapters layer
-  getRawMap(): any {
+  getRawMap(): google.maps.Map | null {
     return this.map;
   }
 

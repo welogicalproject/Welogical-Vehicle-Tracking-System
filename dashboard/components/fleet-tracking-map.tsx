@@ -152,22 +152,15 @@ export function FleetTrackingMap({
       );
     });
 
-    const rawMap = mapEngine.getRawMap();
-    let clickListener: any = null;
-    if (rawMap && onMapClick) {
-      clickListener = rawMap.addListener("click", (e: any) => {
-        if (e.latLng) {
-          onMapClick(e.latLng.lat(), e.latLng.lng());
-        }
+    if (onMapClick) {
+      mapEngine.onMapClick((lat: number, lng: number) => {
+        onMapClick(lat, lng);
       });
     }
 
     setEngine(mapEngine);
 
     return () => {
-      if (clickListener) {
-        google.maps.event.removeListener(clickListener);
-      }
       mapEngine.destroy();
       setEngine(null);
     };

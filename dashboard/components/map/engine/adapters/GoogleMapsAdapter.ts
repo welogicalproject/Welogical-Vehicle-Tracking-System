@@ -100,6 +100,16 @@ export class GoogleMapsAdapter implements IMapEngine {
     return this.map;
   }
 
+  onMapClick(callback: (lat: number, lng: number) => void): void {
+    if (!this.map) return;
+    const listener = this.map.addListener("click", (e: any) => {
+      if (e.latLng) {
+        callback(e.latLng.lat(), e.latLng.lng());
+      }
+    });
+    this.mapListeners.push(listener);
+  }
+
   destroy(): void {
     // Unsubscribe map event listeners to prevent memory leaks
     this.mapListeners.forEach((listener) => {

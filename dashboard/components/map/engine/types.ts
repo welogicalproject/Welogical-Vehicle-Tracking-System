@@ -66,6 +66,6 @@ export interface IMapEngine {
   getCameraController(): ICameraController;
   getOverlayManager(): IOverlayManager;
   isReady(): boolean;
-  getRawMap(): any;
+  onMapClick(callback: (lat: number, lng: number) => void): void;
   destroy(): void;
 }

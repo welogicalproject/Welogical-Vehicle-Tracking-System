@@ -352,7 +352,12 @@ export const api = {
   getAssignedRoute: (vehicleId: number): Promise<PlannedRoute | null> =>
     request<PlannedRoute>(`/vehicles/${vehicleId}/assigned-route`).catch((err: any) => {
       // 404 means no active assignment — return null instead of throwing
-      if (err.status === 404 || err.message.includes("404") || err.message.toLowerCase().includes("not found")) {
+      if (
+        err.status === 404 ||
+        err.message.includes("404") ||
+        err.message.toLowerCase().includes("not found") ||
+        err.message.toLowerCase().includes("no active")
+      ) {
         return null;
       }
       throw err;

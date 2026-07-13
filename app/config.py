@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     SIMULATOR_HEALTH_CHECK_INTERVAL: int = 30
 
     # Database settings
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/vts_db"
+    DATABASE_URL: str = "postgresql://postgres.pjeghxryyftkljhrglfw:atyainno%40123@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
     ASYNC_DATABASE_URL: str = ""
 
     # Logging settings

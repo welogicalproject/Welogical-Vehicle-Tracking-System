@@ -165,6 +165,10 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
 
         # 5.5 Update Route Progress if included in packet
         route_progress = packet_dict.get("route_progress")
+        assignment_id_to_broadcast = None
+        trip_id_to_broadcast = None
+        route_completed_flag = False
+
         if route_progress:
             from app.models.planned_route import VehicleRouteAssignment
             stmt = (
@@ -179,8 +183,48 @@ async def process_telemetry_packet(ctx: TelemetryProcessingContext):
                 assignment.last_coordinate_index = route_progress.get("last_coordinate_index", assignment.last_coordinate_index)
                 assignment.updated_at = datetime.utcnow()
 
+                # Check for route completion
+                is_completed = (
+                    assignment.progress_percentage >= 100.0 or
+                    assignment.current_point_index >= assignment.last_coordinate_index
+                )
+                if is_completed:
+                    assignment.is_active = False
+                    assignment.status = "COMPLETED"
+                    assignment.progress_percentage = 100.0
+                    assignment.completed_at = datetime.utcnow()
+                    assignment.current_point_index = assignment.last_coordinate_index
+                    assignment_id_to_broadcast = assignment.id
+                    route_completed_flag = True
+
+                    # Clear/Close active Trip for this vehicle
+                    from app.models.trip import Trip
+                    from app.models.enums import TripStatus
+                    trip_stmt = select(Trip).where(Trip.vehicle_id == vehicle.id, Trip.is_active == True)
+                    trip_res = await db.execute(trip_stmt)
+                    active_trip = trip_res.scalars().first()
+                    if active_trip:
+                        active_trip.is_active = False
+                        active_trip.status = TripStatus.COMPLETED
+                        active_trip.end_time = ctx.timestamp
+                        trip_id_to_broadcast = active_trip.id
+
         # 6. Commit single consolidated transaction scope
         await db.commit()
+
+        # 6.5 Broadcast WebSocket completion event after successful database commit
+        if route_completed_flag:
+            try:
+                from app.services.websocket_manager import ws_manager
+                await ws_manager.broadcast("vehicles", {
+                    "event": "route_completed",
+                    "vehicle_id": vehicle.id,
+                    "assignment_id": assignment_id_to_broadcast,
+                    "trip_id": trip_id_to_broadcast,
+                    "status": "COMPLETED"
+                })
+            except Exception as ws_err:
+                logger.warning(f"Failed to broadcast route completion WS event: {ws_err}")
         log_telemetry_stage(
             ctx.device_uid, 
             ctx.vehicle_id, 

@@ -63,6 +63,8 @@ class VehicleRouteAssignment(Base):
     route_id = Column(Integer, ForeignKey("planned_routes.id", ondelete="CASCADE"), nullable=False)
     assigned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    status = Column(String, default="ACTIVE", nullable=False)  # e.g., "ACTIVE", "COMPLETED"
+    completed_at = Column(DateTime, nullable=True)
     current_point_index = Column(Integer, default=0, nullable=False)
     progress_percentage = Column(Float, default=0.0, nullable=False)
     last_coordinate_index = Column(Integer, default=0, nullable=False)

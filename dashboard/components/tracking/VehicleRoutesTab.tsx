@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import { Loader2, Route, CheckCircle2, RefreshCw, AlertCircle } from "lucide-react";
 import { PlannedRoute } from "../../types";
 import { api } from "../../lib/api";
+import { useFleet } from "../../context/FleetContext";
 
 interface VehicleRoutesTabProps {
   vehicleId: number;
@@ -31,7 +32,9 @@ function RoutStatusBadge({ status }: { status: string }) {
 }
 
 export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTabProps) {
-  const [activeRoute, setActiveRoute] = useState<PlannedRoute | null>(null);
+  const { activeRoutes, fetchActiveRoute } = useFleet();
+  const activeRoute = activeRoutes[vehicleId] || null;
+
   const [availableRoutes, setAvailableRoutes] = useState<PlannedRoute[]>([]);
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [loadingActive, setLoadingActive] = useState(false);
@@ -39,20 +42,6 @@ export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTa
   const [assigning, setAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchActiveRoute = useCallback(async () => {
-    setLoadingActive(true);
-    try {
-      // api.getAssignedRoute returns null on 404
-      const data = await api.getAssignedRoute(vehicleId);
-      setActiveRoute(data);
-    } catch (err: any) {
-      // Only surface unexpected errors
-      console.error("Failed to fetch active route:", err);
-    } finally {
-      setLoadingActive(false);
-    }
-  }, [vehicleId]);
 
   const fetchAvailableRoutes = useCallback(async () => {
     setLoadingAvailable(true);
@@ -68,17 +57,9 @@ export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTa
   }, []);
 
   useEffect(() => {
-    fetchActiveRoute();
+    fetchActiveRoute(vehicleId);
     fetchAvailableRoutes();
   }, [vehicleId, fetchActiveRoute, fetchAvailableRoutes]);
-
-  // Poll active route every 5 seconds to catch status changes (Running → Completed)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchActiveRoute();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [fetchActiveRoute]);
 
   const handleAssignRoute = async () => {
     if (!selectedRouteId) return;

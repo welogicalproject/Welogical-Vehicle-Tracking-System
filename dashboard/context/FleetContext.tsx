@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import { Vehicle, SystemStats, Event, EventStats, VehicleTrackingSnapshot } from "../types";
+import { Vehicle, SystemStats, Event, EventStats, VehicleTrackingSnapshot, PlannedRoute } from "../types";
 import { api } from "../lib/api";
 
 interface FleetContextType {
@@ -16,6 +16,8 @@ interface FleetContextType {
   loadData: (silent?: boolean) => Promise<void>;
   setSnapshots: React.Dispatch<React.SetStateAction<VehicleTrackingSnapshot[]>>;
   deleteVehicleFromState: (vehicleId: number) => void;
+  activeRoutes: Record<number, PlannedRoute | null>;
+  fetchActiveRoute: (vehicleId: number) => Promise<void>;
 }
 
 const FleetContext = createContext<FleetContextType | undefined>(undefined);
@@ -29,6 +31,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeRoutes, setActiveRoutes] = useState<Record<number, PlannedRoute | null>>({});
 
   const loadData = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
@@ -113,6 +116,15 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const fetchActiveRoute = useCallback(async (vehicleId: number) => {
+    try {
+      const data = await api.getAssignedRoute(vehicleId);
+      setActiveRoutes((prev) => ({ ...prev, [vehicleId]: data }));
+    } catch (err) {
+      setActiveRoutes((prev) => ({ ...prev, [vehicleId]: null }));
+    }
+  }, []);
+
   // Set up WebSocket connection globally
   useEffect(() => {
     const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -181,7 +193,32 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
                 return s;
               })
             );
-          } else if (topic === "vehicles" || topic === "events") {
+
+            // Real-time route progress update
+            if (data.route_progress) {
+              setActiveRoutes((prev) => {
+                const current = prev[vehicle_id];
+                if (!current) return prev;
+                return {
+                  ...prev,
+                  [vehicle_id]: {
+                    ...current,
+                    current_point_index: data.route_progress.current_point_index,
+                    progress_percentage: data.route_progress.progress_percentage
+                  }
+                };
+              });
+            }
+
+          } else if (topic === "vehicles") {
+            const { event: wsEvent, vehicle_id } = data;
+            if (wsEvent === "route_assigned") {
+              fetchActiveRoute(vehicle_id);
+            } else if (wsEvent === "route_completed") {
+              setActiveRoutes((prev) => ({ ...prev, [vehicle_id]: null }));
+            }
+            loadData(true);
+          } else if (topic === "events") {
             loadData(true);
           }
         } catch (err) {
@@ -208,7 +245,7 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       if (socket) socket.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [loadData]);
+  }, [loadData, fetchActiveRoute]);
 
   // Initial load
   useEffect(() => {
@@ -229,7 +266,9 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
     loadData,
     setSnapshots,
     deleteVehicleFromState,
-  }), [vehicles, snapshots, recentEvents, stats, eventsStats, loading, refreshing, error, loadData, deleteVehicleFromState]);
+    activeRoutes,
+    fetchActiveRoute,
+  }), [vehicles, snapshots, recentEvents, stats, eventsStats, loading, refreshing, error, loadData, deleteVehicleFromState, activeRoutes, fetchActiveRoute]);
 
   return <FleetContext.Provider value={value}>{children}</FleetContext.Provider>;
 }

@@ -25,6 +25,15 @@ function getBaseUrl(): string {
 
 const BASE_URL = getBaseUrl().replace(/\/$/, "");
 
+export class APIError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "APIError";
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const response = await fetch(url, {
@@ -38,7 +47,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.detail || `HTTP error! Status: ${response.status}`);
+    throw new APIError(errorBody.detail || `HTTP error! Status: ${response.status}`, response.status);
   }
 
   return response.json();
@@ -341,9 +350,11 @@ export const api = {
     }),
 
   getAssignedRoute: (vehicleId: number): Promise<PlannedRoute | null> =>
-    request<PlannedRoute>(`/vehicles/${vehicleId}/assigned-route`).catch((err: Error) => {
+    request<PlannedRoute>(`/vehicles/${vehicleId}/assigned-route`).catch((err: any) => {
       // 404 means no active assignment — return null instead of throwing
-      if (err.message.includes("404") || err.message.toLowerCase().includes("not found")) return null;
+      if (err.status === 404 || err.message.includes("404") || err.message.toLowerCase().includes("not found")) {
+        return null;
+      }
       throw err;
     }),
   devReset: (): Promise<any> =>

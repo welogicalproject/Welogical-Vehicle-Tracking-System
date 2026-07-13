@@ -11,6 +11,7 @@ import { cn } from "../../lib/utils";
 import { getBatteryVolt, getGPSFixText, getHeadingText, getLastUpdateText, getMainVolt, getNetworkStatus, getOdometerKm, getPacketVal, getFuelLevel } from "../../utils/tracking";
 import { VehicleRoutesTab } from "./VehicleRoutesTab";
 import { api } from "../../lib/api";
+import { useFleet } from "../../context/FleetContext";
 
 interface VehicleDetailsPanelProps {
   selectedVehicleId: number | "all";
@@ -34,43 +35,19 @@ export function VehicleDetailsPanel({
   onDetailTabChange,
   onSelectVehicle,
 }: VehicleDetailsPanelProps) {
-  const [activeRoute, setActiveRoute] = useState<PlannedRoute | null>(null);
-  const [loadingRoute, setLoadingRoute] = useState(false);
+  const { activeRoutes, fetchActiveRoute } = useFleet();
+  const activeRoute = selectedVehicleId !== "all" ? activeRoutes[selectedVehicleId] || null : null;
 
   useEffect(() => {
-    if (selectedVehicleId === "all" || !selectedSnapshot) {
-      setActiveRoute(null);
-      return;
-    }
+    if (selectedVehicleId === "all") return;
+    fetchActiveRoute(selectedVehicleId);
     
-    let isCurrent = true;
-    const fetchActive = async () => {
-      setLoadingRoute(true);
-      try {
-        const route = await api.getAssignedRoute(selectedSnapshot.vehicle.id);
-        if (isCurrent) {
-          setActiveRoute(route);
-        }
-      } catch (err) {
-        console.error("Failed to load active route for details panel:", err);
-        if (isCurrent) {
-          setActiveRoute(null);
-        }
-      } finally {
-        if (isCurrent) {
-          setLoadingRoute(false);
-        }
-      }
-    };
+    const interval = setInterval(() => {
+      fetchActiveRoute(selectedVehicleId);
+    }, 30000); // 30-second fallback polling
 
-    fetchActive();
-    const interval = setInterval(fetchActive, 5000);
-
-    return () => {
-      isCurrent = false;
-      clearInterval(interval);
-    };
-  }, [selectedVehicleId, selectedSnapshot]);
+    return () => clearInterval(interval);
+  }, [selectedVehicleId, fetchActiveRoute]);
 
   return (
     <Card className="border-[#1e294b]/60 bg-[#131a2d]/40 rounded-xl overflow-hidden">

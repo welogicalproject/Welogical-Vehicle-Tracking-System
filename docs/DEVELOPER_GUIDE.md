@@ -73,7 +73,10 @@ The frontend uses the Next.js **App Router**.
 - Data is typically fetched inside `useEffect` hooks in client components, utilizing standard standard browser `fetch()` calls.
 
 ### State Management
-State is kept localized using React's `useState`. We do not currently use heavy global state managers (like Redux) to keep the architecture simple.
+State is centralized globally using the **React Context API** (`FleetProvider` inside `dashboard/context/FleetContext.tsx`) to act as the single source of truth. It handles:
+- Core state properties (`vehicles`, `snapshots`, `recentEvents`, `stats`, `eventsStats`).
+- WebSocket synchronization on the `telemetry`, `vehicles`, and `events` topics, performing in-place updates and silent database reloads when database entities change.
+- Consistent delete propagation (`deleteVehicleFromState`) across all dashboard pages.
 
 ---
 

@@ -30,7 +30,7 @@ graph LR
     Sim -->|HTTP POST| API
     API <-->|asyncpg| DB
     Worker <-->|asyncpg| DB
-    WEB <-->|HTTP GET/POST| API
+    WEB <-->|HTTP & WebSockets| API
     API -->|HTTP GET| External[Google Routes API]
 ```
 
@@ -41,7 +41,7 @@ graph LR
 ### 2.1 Telemetry Ingestion
 - **Input:** GPS hardware (or simulator) sends JSON payloads containing `device_uid`, `latitude`, `longitude`, `speed`, and `timestamp` to `/api/v1/locations/raw`.
 - **Validation:** Pydantic schemas immediately validate the payload structure and data types.
-- **Storage:** Validated packets are inserted into the `raw_packets` and `locations` tables in PostgreSQL asynchronously to maximize throughput.
+- **Storage & Broadcast:** Validated packets are inserted into the database and streamed in real-time to active WebSocket subscribers.
 
 ### 2.2 Trip & Event Processing
 Trip logic is triggered upon receiving locations or handled via background tasks.
@@ -87,6 +87,7 @@ sequenceDiagram
 graph TD
     A[Device/Simulator sends Lat/Lng/Speed] -->|POST /locations/raw| B(FastAPI Router)
     B --> C{Schema Validation}
+    B -->|Broadcast| WS[WebSocket Subscribers]
     C -->|Invalid| D[422 Unprocessable Entity]
     C -->|Valid| E[Location CRUD]
     E --> F[(PostgreSQL: locations)]
@@ -110,5 +111,5 @@ graph TD
 The frontend uses Next.js 15 (App Router).
 - **Server Components:** Used for initial page loads and fetching layout data to improve SEO and load times.
 - **Client Components:** Used for interactive elements (Maps, Charts, Live Tracking tables) requiring React hooks (`useState`, `useEffect`).
-- **State Management:** Local React state combined with data fetching via standard `fetch` API wrapping the backend endpoints.
+- **State Management:** Centralized globally using the React Context API (`FleetProvider` inside `dashboard/context/FleetContext.tsx`). This provider establishes a persistent WebSocket connection to stream real-time updates and update states (vehicles, snapshots, events) on the fly without manual polling.
 - **Styling:** Utility-first styling via Tailwind CSS, avoiding complex CSS file bloat.

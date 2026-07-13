@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.1.0] - 2026-07-12
+### System Stabilization & State Synchronization
+
+### Added
+- **Global State Context (`FleetProvider`)**: Centralized client-side state as the single source of truth, synchronizing Overview dashboards, vehicle listings, and active map views instantly.
+- **Unified WebSocket Service**: Embedded listeners directly inside `FleetProvider` on the `telemetry`, `vehicles`, and `events` topics for real-time updates and silent database reloads.
+- **Interactive Initializer Map Click**: Developed a map coordinate initialization workflow with visual banners and confirmation dialogs supporting Nominatim Address search, raw map clicks, and headquarters defaults.
+- **Header Action Dropdowns**: Added stateful drop-down wrappers for unread system notification logs (with mark-as-read actions) and active admin account menus (with Sign Out).
+- **Drift Prevention Check**: Implemented server startup hooks comparing database migration state against Alembic HEAD to block boot on schema mismatches.
+
+### Fixed
+- Fixed dashboard count mismatches after vehicle deletion.
+- Solved missing Next.js Suspense boundary errors on `useSearchParams()`.
+- Added missing properties (like altitude) and type definitions globally.
+
 ## [v1.0.0] - 2026-07-06
 ### Initial Company Release
 

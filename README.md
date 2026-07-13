@@ -19,15 +19,15 @@ A premium, modular fleet monitoring solution composed of a **FastAPI** backend (
 ---
 
 ## 2. Complete System Architecture
-* **Overall Architecture:** The application follows a decoupled 3-tier architecture. Hardware devices send JSON over HTTP to a FastAPI backend. The backend strictly validates data, stores it in PostgreSQL asynchronously via asyncpg, and performs background trip evaluations. The Next.js client renders the UI by consuming the FastAPI endpoints via standard HTTP REST calls.
+* **Overall Architecture:** The application follows a decoupled 3-tier architecture. Hardware devices send JSON over HTTP to a FastAPI backend. The backend strictly validates data, stores it in PostgreSQL asynchronously via asyncpg, and broadcasts updates over WebSockets. The Next.js client establishes live WebSocket channels to keep the UI in sync, consuming REST endpoints for manual configurations.
 * **Data Flow:**
-  GPS Tracker / Simulator -> HTTP POST -> FastAPI Backend -> Validation (Pydantic) -> PostgreSQL (Raw Packets, Locations, Events) -> Background processing (Trip analytics) -> Next.js Frontend.
+  GPS Tracker / Simulator -> HTTP POST -> FastAPI Backend -> Validation (Pydantic) -> PostgreSQL (Raw Packets, Locations, Events) & WebSockets -> Live Global state context -> Next.js Frontend.
 
 ```mermaid
 graph TD
     GPS[GPS Trackers / Telemetry Simulator] -->|HTTP POST JSON| API[FastAPI Backend]
     API --> DB[(PostgreSQL Database)]
-    API <-->|HTTP GET/POST| WEB[Next.js Dashboard]
+    API <-->|HTTP & WebSockets| WEB[Next.js Dashboard]
     WEB --> USER[Fleet Manager / User]
     API -->|Fetch Routes| GOOGLE[Google Routes API]
 ```
@@ -54,43 +54,45 @@ Welogical-Vehicle-Tracking-System/
 ├── README.md               # Setup and usage guide
 ├── alembic/                # Migration scripts
 │   ├── env.py
-│   └── versions/
-│       ├── 001_initial_migration.py
-│       └── 002_timezone_aware.py
+│   └── versions/           # Incremental schema versions (001_initial to 22a74425feb4)
 ├── app/                    # FastAPI Backend Source
 │   ├── main.py             # Entry point
 │   ├── database.py         # DB connection manager
 │   ├── config.py           # Configuration loader
 │   ├── exceptions.py       # API Error handlers
-│   ├── logging_config.py   # Colored stdout logger
+│   ├── logging_config.py   # Colored logger
 │   ├── models/             # SQLAlchemy schemas
 │   ├── schemas/            # Pydantic schemas
 │   ├── crud/               # DB operation logic
-│   └── routers/            # Router endpoints
+│   ├── routers/            # Router endpoints
+│   └── utils/
+│       └── migrations.py   # Startup database check
 ├── postman/                # Postman collections
 └── dashboard/              # Next.js Dashboard Frontend
     ├── package.json        # Dependencies (React, Recharts, Lucide, Tailwind)
     ├── tsconfig.json       # TypeScript configuration
     ├── next.config.js      # Environment mapping
     ├── tailwind.config.js  # Dark theme configuration
-    ├── postcss.config.js   # PostCSS configuration
     ├── app/                # Next.js pages & styling
-    │   ├── layout.tsx      # Sidebar navigation wrapper
+    │   ├── layout.tsx      # Root layout, wraps FleetProvider
     │   ├── page.tsx        # Page 1: Overview
-    │   ├── globals.css     # Global styles & glassmorphism tokens
+    │   ├── globals.css     # Global styles & tokens
     │   ├── vehicles/
-    │   │   ├── page.tsx    # Page 2: Vehicle Management
-    │   │   └── [id]/
-    │   │       └── page.tsx # Page 3: Vehicle Details
-    │   ├── packets/
-    │   │   └── page.tsx    # Page 4: Raw Packet Monitor
+    │   │   └── page.tsx    # Page 2: Vehicle Inventory
+    │   ├── tracking/
+    │   │   └── page.tsx    # Page 3: Live Map Tracking & Coordinates Initializer
+    │   ├── trips/
+    │   │   └── page.tsx    # Page 4: Trip Management & behavior scores
     │   ├── analytics/
     │   │   └── page.tsx    # Page 5: Telemetry Analytics
     │   └── explorer/
     │       └── page.tsx    # Page 6: Database Explorer
     ├── components/         # React Components
     │   ├── sidebar.tsx     # Navigation sidebar
-    │   └── ui/             # Layout components (Card, Table, Button, etc.)
+    │   ├── header.tsx      # Header containing live notifications bell and admin profiles
+    │   └── ui/             # Card, Table, Button, etc.
+    ├── context/
+    │   └── FleetContext.tsx # Global context & WebSocket manager (Single Source of truth)
     └── lib/
         ├── api.ts          # API fetch client
         └── utils.ts        # Helper functions (cn classnames merger)

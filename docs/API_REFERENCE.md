@@ -54,6 +54,7 @@ Ingest and query GPS telemetry.
     "latitude": 21.1702,
     "longitude": 72.8311,
     "speed": 45.5,
+    "altitude": 10.0,
     "timestamp": "2026-07-06T12:00:00Z"
   }
   ```
@@ -169,6 +170,11 @@ Query optimized routes.
 ---
 
 ## 8. System
+
 ### `GET /health`
 - **Description:** System health check.
 - **Response:** `200 OK` `{"status": "healthy", "database": "connected"}`
+
+### `POST /health/dev-reset`
+- **Description:** Reset the database contents for development mode (truncates application tables, preserves migrations, resets identity sequences).
+- **Response:** `200 OK` `{"status": "success", "message": "Database reset completed successfully."}`

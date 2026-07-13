@@ -34,8 +34,9 @@ Stores physical tracking devices or trucks.
 - **`locations`**: High-frequency GPS pings.
   - `id` (Integer, Primary Key)
   - `vehicle_id` (Integer, Foreign Key -> vehicles.id)
-  - `latitude`, `longitude`, `speed`, `heading` (Float)
+  - `latitude`, `longitude`, `speed`, `altitude` (Float)
   - `timestamp` (DateTime)
+  - `extra_data` (JSONB) - Holds extra status values (e.g. `{'io': ..., 'pwr': ...}`)
 
 ### 2.3 `trips`
 Represents a continuous journey. Created and finalized dynamically.
@@ -63,8 +64,10 @@ Manages personnel and their temporary association with vehicles.
 
 ### 2.6 `route_cache`
 Caches responses from the Google Routes API to minimize external API costs.
-- `hashed_key` (String, Primary Key) - MD5 hash of normalized coordinates.
+- `id` (Integer, Primary Key)
+- `cache_key` (String, Unique) - MD5 hash lookup of normalized routing endpoints.
 - `distance_meters`, `duration_seconds` (Integer)
+- `encoded_polyline` (String)
 
 ### 2.7 `device_config`, `device_commands`, `command_logs`
 Manages Over-The-Air (OTA) configurations and executions.

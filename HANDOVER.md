@@ -7,21 +7,23 @@ This document serves as the official engineering handover for the Welogical Vehi
 ## 1. Project Overview
 - **Purpose:** A real-time vehicle tracking platform for ingesting GPS telemetry and managing fleets.
 - **Business Objective:** Provide fleet operators with actionable insights through automated trip generation, driving score calculations, and real-time mapping.
-- **Current Implementation Status:** Stable `v1.0.0` release. The core pipeline (device -> backend -> database -> frontend) is fully operational.
+- **Current Implementation Status:** Stable `v1.1.0` release. The core pipeline (device -> backend -> database -> frontend) is fully operational with real-time state synchronization.
 - **Major Capabilities:**
   - High-throughput asynchronous GPS packet ingestion.
   - Automated Trip and Event (Overspeed/Idle) generation logic.
   - Google Routes API integration for true road distance calculation.
   - Full management of Vehicles, Drivers, and Driver Assignments.
   - Next.js Dashboard for live monitoring and historical reporting.
+  - Live WebSocket channels for telemetry updates, vehicle lifecycle states, and events.
+  - Database schema integrity checks on startup.
 
 ---
 
 ## 2. Current Project Status
-- **Completed Features:** GPS ingestion, Trip analytics, Event tracking, Driver assignment, Google Routes caching, REST API layer, Database migrations, and the core Next.js Dashboard.
-- **Stable Components:** The FastAPI backend endpoints, SQLAlchemy models, Alembic migrations, and Pydantic schemas are heavily structured and stable.
-- **Components Still Under Development:** While the API supports Over-The-Air (OTA) device commands (`device_commands` table), the hardware-specific socket layer to actually transmit these commands to specific hardware brands is mocked/pending hardware specs.
-- **Known Limitations:** The frontend currently polls the backend for live updates. Real-time WebSockets are not yet implemented.
+- **Completed Features:** GPS ingestion, Trip analytics, Event tracking, Driver assignment, Google Routes caching, REST API layer, Database migrations, Next.js Dashboard, WebSockets synchronization (`telemetry`, `vehicles`, `events` topics), global state provider (`FleetProvider`), and visual starting coordinates initializer.
+- **Stable Components:** The FastAPI backend endpoints, SQLAlchemy models, Alembic migrations, Pydantic schemas, React context hooks, and map engine adapter layer.
+- **Components Still Under Development:** While the API supports Over-The-Air (OTA) device commands (`device_commands` table), the hardware-specific socket layer to transmit commands to physical devices is mocked/pending vendor-specific protocols.
+- **Known Limitations:** OTA command execution is simulation-only. Configuration options are locally persisted or environment-backed.
 
 ---
 

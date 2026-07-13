@@ -70,7 +70,7 @@ export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTa
       await api.assignRoute(vehicleId, selectedRouteId);
       setAssignSuccess(true);
       setSelectedRouteId(null);
-      await fetchActiveRoute();
+      await fetchActiveRoute(vehicleId);
       // Reset success badge after a moment
       setTimeout(() => setAssignSuccess(false), 3000);
     } catch (err: any) {
@@ -106,7 +106,7 @@ export function VehicleRoutesTab({ vehicleId, currentLocation }: VehicleRoutesTa
         </span>
         <button
           onClick={() => {
-            fetchActiveRoute();
+            fetchActiveRoute(vehicleId);
             fetchAvailableRoutes();
           }}
           className="text-cyan-400 hover:text-cyan-300 p-1 rounded transition-colors"

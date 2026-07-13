@@ -44,7 +44,9 @@ export class TrafficLayer implements IMapLayer {
   destroy(): void {
     this.hide();
     if (this.gTrafficLayer) {
-      google.maps.event.clearInstanceListeners(this.gTrafficLayer);
+      if (typeof google !== "undefined" && google.maps && google.maps.event) {
+        google.maps.event.clearInstanceListeners(this.gTrafficLayer);
+      }
     }
     this.gTrafficLayer = null;
     this.map = null;

@@ -66,6 +66,14 @@ export function FleetTrackingMap({
   const [showTraffic, setShowTraffic] = useState(false);
   const [followVehicle, setFollowVehicle] = useState(true);
 
+  const onSelectVehicleRef = useRef(onSelectVehicle);
+  const onMapClickRef = useRef(onMapClick);
+
+  useEffect(() => {
+    onSelectVehicleRef.current = onSelectVehicle;
+    onMapClickRef.current = onMapClick;
+  });
+
   // Reset the initial fit flag when the selected vehicle or the route changes
   useEffect(() => {
     if (
@@ -116,8 +124,8 @@ export function FleetTrackingMap({
 
     // Listen to EventBus clicked markers
     mapEngine.getEventBus().on("MarkerClicked", (snapshot: any) => {
-      if (onSelectVehicle) {
-        onSelectVehicle(snapshot.vehicle.id);
+      if (onSelectVehicleRef.current) {
+        onSelectVehicleRef.current(snapshot.vehicle.id);
       }
 
       // Render InfoWindow popup contents
@@ -155,10 +163,10 @@ export function FleetTrackingMap({
 
     const rawMap = mapEngine.getRawMap();
     let clickListener: google.maps.MapsEventListener | null = null;
-    if (rawMap && onMapClick) {
+    if (rawMap) {
       clickListener = rawMap.addListener("click", (e: google.maps.MapMouseEvent) => {
-        if (e.latLng) {
-          onMapClick(e.latLng.lat(), e.latLng.lng());
+        if (e.latLng && onMapClickRef.current) {
+          onMapClickRef.current(e.latLng.lat(), e.latLng.lng());
         }
       });
     }
@@ -172,7 +180,7 @@ export function FleetTrackingMap({
       mapEngine.destroy();
       setEngine(null);
     };
-  }, [isLoaded, isMiniMap, onSelectVehicle, onMapClick]);
+  }, [isLoaded, isMiniMap]);
 
   // Reset lastPannedRef whenever the user selects a different vehicle so that
   // the initial pan-to-vehicle fires correctly for the newly selected one.

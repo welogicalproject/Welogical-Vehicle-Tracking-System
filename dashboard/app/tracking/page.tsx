@@ -12,7 +12,7 @@ import { VehicleStatusCard } from "../../components/tracking/VehicleStatusCard";
 import { TripPlannerPanel } from "../../components/tracking/TripPlannerPanel";
 import { useFleetTracking } from "../../hooks/useFleetTracking";
 import { useVehicleSelection } from "../../hooks/useVehicleSelection";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 function TrackingPageClient() {
@@ -129,11 +129,11 @@ function TrackingPageClient() {
     }
   };
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     if (mapSelectionMode) {
       setClickedCoords({ lat, lng });
     }
-  };
+  }, [mapSelectionMode]);
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 select-none bg-[#0b0f19] min-h-full">

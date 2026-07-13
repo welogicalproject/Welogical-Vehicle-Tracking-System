@@ -156,16 +156,17 @@ export class VehicleLayer implements IMapLayer {
     this.hide();
     
     // Clear Google Maps event listeners to prevent memory leaks
-    this.markers.forEach((marker) => {
-      google.maps.event.clearInstanceListeners(marker);
-    });
+    if (typeof google !== "undefined" && google.maps && google.maps.event) {
+      this.markers.forEach((marker) => {
+        google.maps.event.clearInstanceListeners(marker);
+      });
+      this.headingMarkers.forEach((marker) => {
+        google.maps.event.clearInstanceListeners(marker);
+      });
+    }
+    
     this.markers.clear();
-
-    this.headingMarkers.forEach((marker) => {
-      google.maps.event.clearInstanceListeners(marker);
-    });
     this.headingMarkers.clear();
-
     this.snapshotMap.clear();
     this.map = null;
     this.adapter = null;

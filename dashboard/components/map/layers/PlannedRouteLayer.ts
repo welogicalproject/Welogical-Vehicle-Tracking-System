@@ -51,8 +51,12 @@ export class PlannedRouteLayer implements IMapLayer {
   destroy(): void {
     if (this.polyline) {
       this.polyline.setMap(null);
-      google.maps.event.clearInstanceListeners(this.polyline);
+      if (typeof google !== "undefined" && google.maps && google.maps.event) {
+        google.maps.event.clearInstanceListeners(this.polyline);
+      }
       this.polyline = null;
     }
+    this.map = null;
+    this.adapter = null;
   }
 }

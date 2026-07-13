@@ -47,7 +47,49 @@ export function FleetProvider({ children }: { children: React.ReactNode }) {
       setStats(statsRes);
       setEventsStats(evStatsRes);
       setRecentEvents(recentEvRes);
-      setSnapshots(trackingRes);
+      setSnapshots((prev) => {
+        if (!prev || prev.length === 0) return trackingRes;
+        return trackingRes.map((newSnap) => {
+          const existing = prev.find((s) => s.vehicle.id === newSnap.vehicle.id);
+          if (!existing) return newSnap;
+
+          // Merge route history. Deduplicate by timestamp and sort chronologically.
+          const historyMap = new Map<string, any>();
+          existing.route_history.forEach((h) => {
+            if (h.timestamp) historyMap.set(h.timestamp, h);
+          });
+          newSnap.route_history.forEach((h) => {
+            if (h.timestamp) historyMap.set(h.timestamp, h);
+          });
+          const mergedHistory = Array.from(historyMap.values()).sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          ).slice(-1000); // cap to 1000 points
+
+          // Keep the newest latest_location based on timestamp
+          let mergedLatest = newSnap.latest_location;
+          if (existing.latest_location && newSnap.latest_location) {
+            const existingTime = new Date(existing.latest_location.timestamp).getTime();
+            const newTime = new Date(newSnap.latest_location.timestamp).getTime();
+            if (existingTime > newTime) {
+              mergedLatest = existing.latest_location;
+            }
+          } else if (existing.latest_location) {
+            mergedLatest = existing.latest_location;
+          }
+
+          // Movement status
+          const mergedMovement = mergedLatest?.speed && mergedLatest.speed > 0.1 ? "Moving" : (newSnap.movement_status || existing.movement_status);
+
+          return {
+            ...existing,
+            vehicle: { ...existing.vehicle, ...newSnap.vehicle },
+            latest_location: mergedLatest,
+            route_history: mergedHistory,
+            movement_status: mergedMovement,
+            health_status: newSnap.health_status || existing.health_status,
+          };
+        });
+      });
       setError(null);
     } catch (err: any) {
       console.error("[FleetContext] Failed to load data", err);

@@ -56,7 +56,9 @@ export class SelectionLayer implements IMapLayer {
   destroy(): void {
     this.hide();
     if (this.ring) {
-      google.maps.event.clearInstanceListeners(this.ring);
+      if (typeof google !== "undefined" && google.maps && google.maps.event) {
+        google.maps.event.clearInstanceListeners(this.ring);
+      }
       this.ring.setMap(null);
     }
     this.ring = null;
